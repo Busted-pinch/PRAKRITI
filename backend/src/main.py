@@ -1,7 +1,26 @@
 from fastapi import FastAPI
 from src.core.logger import logger
+from src.api.auth.views import router as auth_router
+from src.api.user.views import router as user_router
+from src.api.environment.views import router as environment_router
+from src.api.simulation.views import router as simulation_router
+from src.api.chat.views import router as chat_router
+from src.api.growth.views import router as growth_router
+from src.api.leaderboard.views import router as leaderboard_router
+from src.api.privacy.views import router as privacy_router
+from src.api.internal.views import router as internal_router
 
-app = FastAPI(title="Techathon Backend")
+app = FastAPI(title="Techathon 3.0 PRAKRITI Backend")
+
+app.include_router(auth_router, prefix="/auth", tags=["Auth"])
+app.include_router(user_router, prefix="/user", tags=["User"])
+app.include_router(environment_router, prefix="/environment", tags=["Environment"])
+app.include_router(simulation_router, prefix="/simulation", tags=["Simulation"])
+app.include_router(chat_router, prefix="/chat", tags=["Chat"])
+app.include_router(growth_router, prefix="/growth", tags=["Growth"])
+app.include_router(leaderboard_router, prefix="/leaderboard", tags=["Leaderboard"])
+app.include_router(privacy_router, prefix="/privacy", tags=["Privacy"])
+app.include_router(internal_router, prefix="/internal", tags=["Internal"])
 
 @app.on_event("startup")
 async def startup_event():
