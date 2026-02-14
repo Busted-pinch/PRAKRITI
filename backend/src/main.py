@@ -10,7 +10,10 @@ from src.api.leaderboard.views import router as leaderboard_router
 from src.api.privacy.views import router as privacy_router
 from src.api.internal.views import router as internal_router
 
-app = FastAPI(title="Techathon 3.0 PRAKRITI Backend")
+app = FastAPI(title="Techathon 3.0 PRAKRITI Backend",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc"
+)
 
 app.include_router(auth_router, prefix="/auth", tags=["Auth"])
 app.include_router(user_router, prefix="/user", tags=["User"])
