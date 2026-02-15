@@ -3,13 +3,18 @@ from typing import List, Dict
 from src.api.deps import get_current_user, get_supabase_client
 from .schemas import ChatMessage
 import asyncio
+import json
 
 router = APIRouter()
 
 
+# ---------------------------
+# Connection Manager
+# ---------------------------
+
 class ConnectionManager:
     def __init__(self):
-        # Allow multiple connections per user (multi-tab support)
+        # Multi-tab support
         self.active_connections: Dict[str, List[WebSocket]] = {}
 
     async def connect(self, user_id: str, websocket: WebSocket):
@@ -25,20 +30,24 @@ class ConnectionManager:
             if websocket in self.active_connections[user_id]:
                 self.active_connections[user_id].remove(websocket)
 
-            # Cleanup if no active sockets left
             if not self.active_connections[user_id]:
                 del self.active_connections[user_id]
 
-    async def send_personal_message(self, message: str, user_id: str):
+    async def send_json(self, data: dict, user_id: str):
         if user_id in self.active_connections:
             for connection in self.active_connections[user_id]:
-                await connection.send_text(message)
+                try:
+                    await connection.send_json(data)
+                except:
+                    pass
 
 
 manager = ConnectionManager()
 
 
-# ------------------- HTTP ROUTES -------------------
+# ---------------------------
+# HTTP Endpoints
+# ---------------------------
 
 @router.post("/message")
 async def send_message(
@@ -58,12 +67,32 @@ async def get_chat_history(
     ]
 
 
-# ------------------- WEBSOCKET ROUTE -------------------
+# ---------------------------
+# AI Streaming Stub
+# Replace this with LangGraph stream
+# ---------------------------
+
+async def stream_ai_response(prompt: str):
+    """
+    Replace this function with LangGraph streaming logic.
+    This is currently a stub for token-wise streaming.
+    """
+
+    fake_response = f"Echo: {prompt}"
+
+    for char in fake_response:
+        await asyncio.sleep(0.03)  # simulate token delay
+        yield char
+
+
+# ---------------------------
+# WebSocket Endpoint
+# ---------------------------
 
 @router.websocket("/stream")
 async def websocket_endpoint(websocket: WebSocket):
 
-    # Extract token from query params (browser compatible)
+    # Extract token (browser compatible)
     token = websocket.query_params.get("token")
 
     if not token:
@@ -85,7 +114,7 @@ async def websocket_endpoint(websocket: WebSocket):
         await websocket.close(code=1008)
         return
 
-    # Accept and register connection
+    # Accept connection
     await manager.connect(user_id, websocket)
 
     try:
@@ -93,7 +122,7 @@ async def websocket_endpoint(websocket: WebSocket):
             try:
                 # Idle timeout (10 minutes)
                 data = await asyncio.wait_for(
-                    websocket.receive_text(),
+                    websocket.receive_json(),
                     timeout=600
                 )
 
@@ -101,12 +130,48 @@ async def websocket_endpoint(websocket: WebSocket):
                 await websocket.close(code=1000)
                 break
 
-            # Process message
-            response = f"Echo: {data}"
-            await manager.send_personal_message(response, user_id)
+            except WebSocketDisconnect:
+                break
 
-    except WebSocketDisconnect:
-        pass
+            # Expecting JSON input like:
+            # { "type": "message", "content": "Hello" }
+
+            if data.get("type") != "message":
+                continue
+
+            prompt = data.get("content", "")
+
+            # Notify frontend streaming started
+            await manager.send_json(
+                {"type": "start"},
+                user_id
+            )
+
+            try:
+                # Stream AI tokens
+                async for token in stream_ai_response(prompt):
+                    await manager.send_json(
+                        {
+                            "type": "token",
+                            "content": token
+                        },
+                        user_id
+                    )
+
+                # Streaming complete
+                await manager.send_json(
+                    {"type": "done"},
+                    user_id
+                )
+
+            except Exception as e:
+                await manager.send_json(
+                    {
+                        "type": "error",
+                        "message": str(e)
+                    },
+                    user_id
+                )
 
     finally:
         manager.disconnect(user_id, websocket)
