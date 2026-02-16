@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
-from typing import List, Dict
-from src.api.deps import get_current_user, get_supabase_client
+from typing import List, Dict, Any
+from src.api.deps import get_current_user
 from .schemas import ChatMessage
-import asyncio
+from langchain_core.messages import HumanMessage, AIMessage
+from src.langgraph.graph import app
 import json
 
 router = APIRouter()
@@ -50,128 +51,63 @@ manager = ConnectionManager()
 # ---------------------------
 
 @router.post("/message")
-async def send_message(
-    message: ChatMessage,
-    current_user: dict = Depends(get_current_user)
-):
-    return {"reply": "Echo: " + message.content}
-
-
-@router.get("/history", response_model=List[ChatMessage])
-async def get_chat_history(
-    current_user: dict = Depends(get_current_user)
-):
-    return [
-        ChatMessage(role="user", content="hi"),
-        ChatMessage(role="ai", content="hello"),
-    ]
-
-
-# ---------------------------
-# AI Streaming Stub
-# Replace this with LangGraph stream
-# ---------------------------
-
-async def stream_ai_response(prompt: str):
+async def send_message(message: ChatMessage, current_user: dict = Depends(get_current_user)):
     """
-    Replace this function with LangGraph streaming logic.
-    This is currently a stub for token-wise streaming.
+    Process a message through the LangGraph agentic system.
     """
+    initial_state = {
+        "messages": [HumanMessage(content=message.content)],
+        "user_id": current_user.get("id"),
+        "structured_data": {}
+    }
+    
+    # Run the graph
+    result = await app.ainvoke(initial_state)
+    
+    # Extract the last message content
+    last_message = result["messages"][-1]
+    response_content = last_message.content if hasattr(last_message, "content") else str(last_message)
+    
+    return {
+        "reply": response_content,
+        "structured_data": result.get("structured_data"),
+        "agent_trace": result.get("next_agent") # Debug info
+    }
 
-    fake_response = f"Echo: {prompt}"
-
-    for char in fake_response:
-        await asyncio.sleep(0.03)  # simulate token delay
-        yield char
-
-
-# ---------------------------
-# WebSocket Endpoint
-# ---------------------------
+@router.get("/history")
+async def get_chat_history(current_user: dict = Depends(get_current_user)):
+    # TODO: Fetch from actual history database
+    return [{"role": "system", "content": "History not yet connected to DB."}]
 
 @router.websocket("/stream")
 async def websocket_endpoint(websocket: WebSocket):
-
-    # Extract token (browser compatible)
-    token = websocket.query_params.get("token")
-
-    if not token:
-        await websocket.close(code=1008)
-        return
-
-    supabase = get_supabase_client()
-
-    try:
-        user = supabase.auth.get_user(token)
-
-        if not user or not user.user:
-            await websocket.close(code=1008)
-            return
-
-        user_id = user.user.id
-
-    except Exception:
-        await websocket.close(code=1008)
-        return
-
-    # Accept connection
-    await manager.connect(user_id, websocket)
-
+    await websocket.accept()
     try:
         while True:
-            try:
-                # Idle timeout (10 minutes)
-                data = await asyncio.wait_for(
-                    websocket.receive_json(),
-                    timeout=600
-                )
-
-            except asyncio.TimeoutError:
-                await websocket.close(code=1000)
-                break
-
-            except WebSocketDisconnect:
-                break
-
-            # Expecting JSON input like:
-            # { "type": "message", "content": "Hello" }
-
-            if data.get("type") != "message":
-                continue
-
-            prompt = data.get("content", "")
-
-            # Notify frontend streaming started
-            await manager.send_json(
-                {"type": "start"},
-                user_id
-            )
-
-            try:
-                # Stream AI tokens
-                async for token in stream_ai_response(prompt):
-                    await manager.send_json(
-                        {
-                            "type": "token",
-                            "content": token
-                        },
-                        user_id
-                    )
-
-                # Streaming complete
-                await manager.send_json(
-                    {"type": "done"},
-                    user_id
-                )
-
-            except Exception as e:
-                await manager.send_json(
-                    {
-                        "type": "error",
-                        "message": str(e)
-                    },
-                    user_id
-                )
-
-    finally:
-        manager.disconnect(user_id, websocket)
+            data = await websocket.receive_text()
+            
+            initial_state = {
+                "messages": [HumanMessage(content=data)],
+                "user_id": "websocket_user", # TODO: Auth
+                "structured_data": {}
+            }
+            
+            async for event in app.astream(initial_state):
+                for node_name, state_update in event.items():
+                    if "messages" in state_update and state_update["messages"]:
+                        last_msg = state_update["messages"][-1]
+                        content = last_msg.content if hasattr(last_msg, "content") else str(last_msg)
+                        
+                        # Send updates for each node
+                        await websocket.send_json({
+                            "type": "update",
+                            "node": node_name,
+                            "content": content,
+                            "structured_data": state_update.get("structured_data")
+                        })
+            
+            # Send final completion marker
+            await websocket.send_json({"type": "complete"})
+            
+    except WebSocketDisconnect:
+        print("Client disconnected")
