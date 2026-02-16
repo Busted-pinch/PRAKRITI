@@ -9,6 +9,11 @@ from src.api.growth.views import router as growth_router
 from src.api.leaderboard.views import router as leaderboard_router
 from src.api.privacy.views import router as privacy_router
 from src.api.internal.views import router as internal_router
+from src.api.session.views import router as session_router
+from src.api.behavior.views import router as behavior_router
+from src.api.interaction.views import router as interaction_router
+
+
 
 app = FastAPI(title="Techathon 3.0 PRAKRITI Backend",
     docs_url="/api/docs",
@@ -37,3 +42,10 @@ async def shutdown_event():
 async def root():
     logger.info("Root endpoint accessed")
     return {"message": "Hello Techathon"}
+
+app.include_router(session_router, prefix="/session", tags=["Session"])
+
+app.include_router(behavior_router, prefix="/behavior", tags=["Behavior"])
+
+app.include_router(interaction_router, prefix="/interaction", tags=["Interaction"])
+
