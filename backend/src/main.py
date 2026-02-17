@@ -12,6 +12,8 @@ from src.api.internal.views import router as internal_router
 from src.api.session.views import router as session_router
 from src.api.behavior.views import router as behavior_router
 from src.api.interaction.views import router as interaction_router
+from src.api.user.behavior.views import router as behavior_router
+
 
 
 
@@ -29,6 +31,8 @@ app.include_router(growth_router, prefix="/growth", tags=["Growth"])
 app.include_router(leaderboard_router, prefix="/leaderboard", tags=["Leaderboard"])
 app.include_router(privacy_router, prefix="/privacy", tags=["Privacy"])
 app.include_router(internal_router, prefix="/internal", tags=["Internal"])
+app.include_router(behavior_router, prefix="/user", tags=["Behavior"])
+
 
 @app.on_event("startup")
 async def startup_event():
