@@ -1,4 +1,5 @@
 import React from 'react';
+import ErrorBoundary from './components/ErrorBoundary';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { ThemeProvider } from './context/ThemeContext';
@@ -26,15 +27,23 @@ function AnimatedRoutes() {
   );
 }
 
+
+
+import { EnvironmentProvider } from './context/EnvironmentContext';
+
 function App() {
   return (
     <ThemeProvider>
-      <Router>
-        <div className="min-h-screen transition-colors duration-300">
-          <Navbar />
-          <AnimatedRoutes />
-        </div>
-      </Router>
+      <EnvironmentProvider>
+        <ErrorBoundary>
+          <Router>
+            <div className="min-h-screen transition-colors duration-300">
+              <Navbar />
+              <AnimatedRoutes />
+            </div>
+          </Router>
+        </ErrorBoundary>
+      </EnvironmentProvider>
     </ThemeProvider>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Leaf } from 'lucide-react';
+import { Menu, X, Leaf, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
 
@@ -8,7 +8,7 @@ const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const location = useLocation();
-    const { isDarkMode } = useTheme();
+    const { isDarkMode, toggleTheme } = useTheme();
 
     // Handle scroll effect for navbar background
     useEffect(() => {
@@ -77,16 +77,29 @@ const Navbar = () => {
                         </Link>
                     </nav>
 
-                    {/* Mobile Menu Button */}
-                    <button
-                        onClick={() => setIsOpen(!isOpen)}
-                        className={`md:hidden p-2 rounded-lg transition-colors ${isDarkMode
-                            ? 'text-gray-300 hover:bg-gray-800'
-                            : 'text-gray-600 hover:bg-gray-100'
-                            }`}
-                    >
-                        {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-                    </button>
+                    {/* Mobile Menu Button & Theme Toggle */}
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={toggleTheme}
+                            className={`p-2 rounded-lg transition-colors ${isDarkMode
+                                ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                }`}
+                            aria-label="Toggle Theme"
+                        >
+                            {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                        </button>
+
+                        <button
+                            onClick={() => setIsOpen(!isOpen)}
+                            className={`md:hidden p-2 rounded-lg transition-colors ${isDarkMode
+                                ? 'text-gray-300 hover:bg-gray-800'
+                                : 'text-gray-600 hover:bg-gray-100'
+                                }`}
+                        >
+                            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                        </button>
+                    </div>
                 </div>
             </div>
 
