@@ -1,7 +1,7 @@
 from typing import Dict, Any
 from langchain_core.messages import AIMessage, SystemMessage
 from src.langgraph.state import UnifiedState
-from src.AggregateData.datastore import Datastore
+from src.core.aggregate_data import Datastore
 from src.llm.gemini import get_gemini_llm
 
 async def environment_agent(state: UnifiedState, datastore: Datastore) -> Dict[str, Any]:

@@ -52,3 +52,7 @@
 2026-02-17 12:53:27.044 | INFO     | src.main:startup_event:35 - Application startup
 2026-02-17 12:53:27.173 | INFO     | src.main:root:43 - Root endpoint accessed
 2026-02-17 13:07:31.082 | INFO     | src.main:shutdown_event:39 - Application shutdown
+2026-02-18 20:03:41.186 | INFO     | src.main:startup_event:39 - Application startup
+2026-02-18 21:43:45.309 | INFO     | src.main:shutdown_event:43 - Application shutdown
+2026-02-18 21:43:52.857 | INFO     | src.main:startup_event:39 - Application startup
+2026-02-18 21:46:47.798 | INFO     | src.main:shutdown_event:43 - Application shutdown

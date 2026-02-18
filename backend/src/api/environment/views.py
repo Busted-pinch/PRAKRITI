@@ -3,7 +3,7 @@ from typing import Optional
 from src.api.deps import get_current_user
 from src.core.supabase_client import supabase
 import requests
-from src.core.aggregate_data import AggregateData
+from src.core.aggregate_data import Datastore
 
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
@@ -40,7 +40,7 @@ async def get_exposure_history(start: str, end: str):
 
 
 
-store = AggregateData()
+store = Datastore()
 
 
 @router.post("/collect")
