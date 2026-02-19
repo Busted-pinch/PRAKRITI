@@ -121,7 +121,7 @@ export const IntroStep = ({ onNext }) => {
                 className="max-w-4xl mx-auto"
             >
                 <div className="inline-block px-4 py-1.5 rounded-full bg-emerald-500/10 text-emerald-500 font-semibold text-sm tracking-widest uppercase mb-6 border border-emerald-500/20">
-                    Prakriti Assessment
+                    PRAKRITI Assessment
                 </div>
                 <h1 className={`text-6xl md:text-8xl font-bold tracking-tight mb-8 ${isDarkMode
                     ? 'text-white'
@@ -263,7 +263,7 @@ export const DiseaseStep = ({ data, update, onNext, onBack }) => {
                                                 ? "bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-500/20"
                                                 : (isDarkMode
                                                     ? "bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:border-white/20"
-                                                    : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-emerald-200")
+                                                    : "bg-white border-gray-200 text-gray-600 hover:bg-emerald-50 hover:border-emerald-200")
                                         )}
                                     >
                                         {item}
@@ -313,17 +313,17 @@ export const InterestStep = ({ data, update, onNext, onBack }) => {
                                     className={cn(
                                         "p-4 rounded-xl text-left text-sm transition-all border relative overflow-hidden group font-medium",
                                         data.includes(item)
-                                            ? "bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-500/20"
+                                            ? "bg-teal-500 text-white border-teal-500 shadow-lg shadow-teal-500/20"
                                             : (isDarkMode
                                                 ? "bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20"
-                                                : "bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:bg-blue-50")
+                                                : "bg-white border-gray-200 text-gray-600 hover:border-teal-300 hover:bg-teal-50")
                                     )}
                                 >
                                     <span className="relative z-10 capitalize">{item}</span>
                                     {data.includes(item) && (
                                         <motion.div
                                             layoutId="highlight_interest"
-                                            className="absolute inset-0 bg-blue-500/10"
+                                            className="absolute inset-0 bg-emerald-500/10"
                                         />
                                     )}
                                 </button>
@@ -403,7 +403,7 @@ export const HobbyStep = ({ data, update, onNext, onBack }) => {
                                                 ? "bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20"
                                                 : (isDarkMode
                                                     ? "bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:border-white/20"
-                                                    : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-emerald-300")
+                                                    : "bg-white border-gray-200 text-gray-600 hover:bg-emerald-50 hover:border-emerald-300")
                                         )}
                                     >
                                         {item}
@@ -454,7 +454,7 @@ export const ConstraintStep = ({ data, update, onNext, onBack }) => {
                                         ? "bg-emerald-500 border-emerald-500 text-white shadow-lg"
                                         : (isDarkMode
                                             ? "bg-white/5 border-white/10 text-gray-400 hover:bg-white/10"
-                                            : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-emerald-300")
+                                            : "bg-white border-gray-200 text-gray-600 hover:bg-emerald-50 hover:border-emerald-300")
                                 )}
                             >
                                 <span className="relative z-10 font-medium">{level}</span>

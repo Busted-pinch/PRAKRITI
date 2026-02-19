@@ -2,29 +2,24 @@ from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from typing import List, Dict, Any
 from src.api.deps import get_current_user, get_supabase_client
 from .schemas import ChatMessage
-from langchain_core.messages import HumanMessage, AIMessage
-from src.langgraph.graph import app
+import asyncio
 import json
 from loguru import logger
 
 router = APIRouter()
 
-
 # ---------------------------
-# Connection Manager
+# Mock Connection Manager
 # ---------------------------
 
 class ConnectionManager:
     def __init__(self):
-        # Multi-tab support
         self.active_connections: Dict[str, List[WebSocket]] = {}
 
     async def connect(self, user_id: str, websocket: WebSocket):
         await websocket.accept()
-
         if user_id not in self.active_connections:
             self.active_connections[user_id] = []
-
         self.active_connections[user_id].append(websocket)
         logger.info(f"WebSocket: User {user_id} connected. Active connections: {len(self.active_connections.get(user_id))}")
 
@@ -32,7 +27,6 @@ class ConnectionManager:
         if user_id in self.active_connections:
             if websocket in self.active_connections[user_id]:
                 self.active_connections[user_id].remove(websocket)
-
             if not self.active_connections[user_id]:
                 del self.active_connections[user_id]
             logger.info(f"WebSocket: User {user_id} disconnected")
@@ -45,18 +39,16 @@ class ConnectionManager:
                 except:
                     pass
 
-
 manager = ConnectionManager()
 
-
 # ---------------------------
-# HTTP Endpoints
+# HTTP Endpoints (MOCKED)
 # ---------------------------
 
 @router.post("/message")
-async def send_message(message: ChatMessage, current_user: dict = Depends(get_current_user)):
+async def send_message(message: ChatMessage):
     """
-    Process a message through the LangGraph agentic system.
+    Mocked Chat Endpoint to bypass LangChain/Pydantic issues on Python 3.14.
     """
     initial_state = {
         "messages": [HumanMessage(content=message.content)],
@@ -72,16 +64,25 @@ async def send_message(message: ChatMessage, current_user: dict = Depends(get_cu
     last_message = result["messages"][-1]
     response_content = last_message.content if hasattr(last_message, "content") else str(last_message)
     
+    # Simple keyword-based logic for demo
+    if "aqi" in user_msg and "300" in user_msg:
+        reply = "If the AQI reaches 300 (Severe), I recommend avoiding all outdoor physical activity. Indoor air purification is advised."
+    elif "monitor" in user_msg or "track" in user_msg:
+        reply = "I am tracking environmental metrics in real-time. Your local monitors are active."
+    elif "simulation" in user_msg or "what if" in user_msg:
+        reply = "I can run simulations for you. Try asking 'What if temperature rises by 2 degrees?'"
+    else:
+        reply = "I am Prakriti's Digital Twin. I can help you analyze environmental data and simulate future scenarios."
+
     return {
-        "reply": response_content,
-        "structured_data": result.get("structured_data"),
-        "agent_trace": result.get("next_agent") # Debug info
+        "reply": reply,
+        "structured_data": {},
+        "agent_trace": "mock_agent"
     }
 
 @router.get("/history")
-async def get_chat_history(current_user: dict = Depends(get_current_user)):
-    # TODO: Fetch from actual history database
-    return [{"role": "system", "content": "History not yet connected to DB."}]
+async def get_chat_history():
+    return [{"role": "system", "content": "History not available in mock mode."}]
 
 @router.websocket("/stream")
 async def websocket_endpoint(websocket: WebSocket, token: str = None):
