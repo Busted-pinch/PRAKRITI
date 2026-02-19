@@ -17,7 +17,7 @@ const GlassCard = ({ children, className, hoverEffect = true }) => {
                 isDarkMode
                     ? "bg-slate-900/60 border-white/10 shadow-xl shadow-emerald-900/20" // Dark Mode (Universal)
                     : (environmentalMode
-                        ? "bg-white/70 border-emerald-200/50 shadow-lg shadow-emerald-900/5" // Light Eco
+                        ? "bg-white/80 border-emerald-400 shadow-[0_0_20px_-5px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_-5px_rgba(16,185,129,0.5)]" // Light Eco: Glowing Green Border & Shadow
                         : "bg-white/60 border-white/40 shadow-xl shadow-slate-900/5"), // Light Depleted
                 className
             )}

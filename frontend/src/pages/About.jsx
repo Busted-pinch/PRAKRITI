@@ -1,16 +1,26 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
+import { useEnvironment } from '../context/EnvironmentContext';
+import Background3D from '../components/Background3D';
 import Footer from '../components/Footer';
 import GlassCard from '../components/GlassCard';
 import { Users, Globe, Brain, Zap, Heart, Shield } from 'lucide-react';
 
 const About = () => {
     const { isDarkMode } = useTheme();
+    const { environmentalMode } = useEnvironment();
 
     return (
-        <div className={`min-h-screen pt-32 pb-20 px-4 sm:px-6 lg:px-8 transition-colors duration-500 ${isDarkMode ? 'bg-[#0c0a09]' : 'bg-[#e7e5e4]'}`}>
-            <div className="max-w-4xl mx-auto">
+        <div className={`min-h-screen pt-32 pb-20 px-4 sm:px-6 lg:px-8 transition-colors duration-500 ${isDarkMode
+            ? 'bg-[#0c0a09]'
+            : (environmentalMode ? 'bg-transparent' : 'bg-[#e7e5e4]')
+            }`}>
+            <div className="fixed inset-0 z-0 pointer-events-none">
+                <Background3D />
+            </div>
+
+            <div className="max-w-4xl mx-auto relative z-10">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}

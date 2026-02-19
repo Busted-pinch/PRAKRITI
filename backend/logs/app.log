@@ -117,3 +117,20 @@
 2026-02-19 14:27:02.375 | INFO     | src.main:startup_event:55 - Application startup
 2026-02-19 14:27:02.377 | INFO     | src.main:startup_event:55 - Application startup
 2026-02-19 14:30:02.573 | INFO     | src.main:shutdown_event:59 - Application shutdown
+2026-02-19 15:35:30.438 | INFO     | src.main:startup_event:55 - Application startup
+2026-02-19 15:52:10.391 | INFO     | src.main:shutdown_event:59 - Application shutdown
+2026-02-19 15:53:06.569 | INFO     | src.main:startup_event:55 - Application startup
+2026-02-19 15:55:36.680 | ERROR    | src.api.auth.views:register:29 - Registration exception: email rate limit exceeded
+2026-02-19 15:55:53.978 | ERROR    | src.api.auth.views:login:46 - Login exception: Email not confirmed
+2026-02-19 15:58:17.438 | ERROR    | src.api.auth.views:register:29 - Registration exception: email rate limit exceeded
+2026-02-19 15:59:53.576 | INFO     | src.main:shutdown_event:59 - Application shutdown
+2026-02-19 16:00:11.469 | INFO     | src.main:startup_event:55 - Application startup
+2026-02-19 16:00:25.218 | INFO     | src.main:shutdown_event:59 - Application shutdown
+2026-02-19 16:00:39.913 | INFO     | src.main:startup_event:55 - Application startup
+2026-02-19 16:01:06.821 | ERROR    | src.api.auth.views:register:29 - Registration exception: email rate limit exceeded
+2026-02-19 16:01:18.496 | ERROR    | src.api.auth.views:login:46 - Login exception: Email not confirmed
+2026-02-19 16:04:31.750 | INFO     | src.main:shutdown_event:59 - Application shutdown
+2026-02-19 16:04:48.537 | INFO     | src.main:startup_event:55 - Application startup
+2026-02-19 18:40:34.189 | ERROR    | src.api.auth.views:login:46 - Login exception: Invalid login credentials
+2026-02-19 18:49:11.216 | INFO     | src.main:shutdown_event:59 - Application shutdown
+2026-02-19 18:51:08.653 | INFO     | src.main:startup_event:55 - Application startup
