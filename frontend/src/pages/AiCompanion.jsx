@@ -10,11 +10,39 @@ import api from '../services/api';
 const AiCompanion = () => {
     const { isDarkMode } = useTheme();
     const [messages, setMessages] = useState([
-        { id: 1, text: "Greetings, Traveler. I am Prakritis Digital Twin. I can help you simulate environmental scenarios or answer your questions about the ecosystem. How can I assist you today?", sender: 'bot' }
+        { id: 1, text: "Greetings, Traveler. I am Prakritis Digital Twin. I can help you understand your environment and habits.", sender: 'bot' }
     ]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+
+    // rotating placeholder state
+    const [placeholderIndex, setPlaceholderIndex] = useState(0);
+
     const messagesEndRef = useRef(null);
+
+    const PLACEHOLDERS = [
+        "Ask your Digital Twin about your environment...",
+        "How does today’s AQI affect me?",
+        "What activities suit my profile today?",
+        "Is it safe for outdoor activity now?",
+        "How can I improve my environmental balance?"
+    ];
+
+    const SUGGESTED_QUESTIONS = [
+        "What does my environmental profile mean?",
+        "Is it a good day for outdoor activity?",
+        "How does AQI affect my health sensitivity?",
+        "What activities suit my behaviour type?",
+        "How can I improve my environmental balance?",
+        "What should I do today based on my environment?"
+    ];
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setPlaceholderIndex((prev) => (prev + 1) % PLACEHOLDERS.length);
+        }, 4000);
+        return () => clearInterval(interval);
+    }, []);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -24,22 +52,26 @@ const AiCompanion = () => {
         scrollToBottom();
     }, [messages]);
 
-    const handleSendMessage = async (e) => {
-        e.preventDefault();
-        if (!input.trim()) return;
+    const handleSendMessage = async (e, overrideText = null) => {
+        if (e) e.preventDefault();
+        const textToSend = overrideText || input;
 
-        const userMsg = { id: Date.now(), text: input, sender: 'user' };
+        if (!textToSend.trim()) return;
+
+        const userMsg = { id: Date.now(), text: textToSend, sender: 'user' };
         setMessages(prev => [...prev, userMsg]);
         setInput('');
         setIsTyping(true);
+
+        const currentInput = textToSend; // Use local var for logic below
 
         try {
             // Try Simulation API
             try {
                 // Determine if this is a simulation request (naive check)
-                if (input.toLowerCase().includes('what if') || input.toLowerCase().includes('simulate')) {
+                if (currentInput.toLowerCase().includes('what if') || currentInput.toLowerCase().includes('simulate')) {
                     const response = await api.post('/simulation/run', {
-                        scenario: input,
+                        scenario: currentInput,
                         parameters: { aqi: 200, temp: 30 } // Extract real params in future
                     });
 
@@ -53,14 +85,14 @@ const AiCompanion = () => {
                     setMessages(prev => [...prev, botMsg]);
                 } else {
                     // Standard Chat API
-                    const response = await api.post('/chat/message', { message: input });
+                    const response = await api.post('/chat/message', { message: currentInput });
                     setMessages(prev => [...prev, { id: Date.now() + 1, text: response.data.reply, sender: 'bot' }]);
                 }
             } catch (err) {
                 console.warn("Backend offline, using simulation mock.");
                 // Fallback Mock
                 setTimeout(() => {
-                    const mockReply = input.toLowerCase().includes('what if')
+                    const mockReply = currentInput.toLowerCase().includes('what if')
                         ? "Simulation projected: If AQI reaches 200, outdoor physical activity risk increases by 45%. Recommended action: Switch to indoor yoga."
                         : "I am currently capable of simulating environmental scenarios. Try asking 'What if AQI rises to 300?'";
 
@@ -78,7 +110,7 @@ const AiCompanion = () => {
             // Let's adjust logic to be safer.
         }
         // Safety for non-fallback path
-        if (!input.toLowerCase().includes('what if') && !input.toLowerCase().includes('simulate')) {
+        if (!currentInput.toLowerCase().includes('what if') && !currentInput.toLowerCase().includes('simulate')) {
             // If we didn't hit the catch block, we need to turn off typing? 
             // actually the try block sets messages, but we need to ensure setIsTyping(false) runs.
             // The above code is a bit mixed. Let me refine it in the replacement.
@@ -185,7 +217,33 @@ const AiCompanion = () => {
                     </div>
 
                     {/* Input Area */}
-                    <div className={`p-4 border-t ${isDarkMode ? 'border-white/5' : 'border-gray-200'}`}>
+                    <div className={`p-4 border-t relative z-20 ${isDarkMode ? 'border-white/5 bg-gray-900/40' : 'border-gray-200 bg-white/40'}`}>
+
+                        {/* Suggested Questions (Chips) */}
+                        <AnimatePresence>
+                            {messages.length <= 2 && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="flex flex-wrap gap-2 mb-4"
+                                >
+                                    {SUGGESTED_QUESTIONS.map((q, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => handleSendMessage(null, q)}
+                                            className={`text-xs px-3 py-1.5 rounded-full border backdrop-blur-md transition-all duration-300 ${isDarkMode
+                                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-400'
+                                                : 'bg-white/60 border-emerald-200 text-emerald-700 hover:bg-white hover:border-emerald-300 hover:shadow-sm'
+                                                }`}
+                                        >
+                                            {q}
+                                        </button>
+                                    ))}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
                         <form onSubmit={handleSendMessage} className={`flex items-center gap-2 p-1.5 rounded-2xl border transition-all ${isDarkMode
                             ? 'bg-black/20 border-white/10 focus-within:border-emerald-500/50'
                             : 'bg-white border-gray-200 focus-within:border-emerald-200 shadow-sm'
@@ -198,8 +256,8 @@ const AiCompanion = () => {
                                 type="text"
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
-                                placeholder="Type your message..."
-                                className={`flex-1 bg-transparent px-2 py-2 focus:outline-none ${isDarkMode ? 'text-white placeholder-gray-500' : 'text-gray-900 placeholder-gray-400'
+                                placeholder={PLACEHOLDERS[placeholderIndex]}
+                                className={`flex-1 bg-transparent px-2 py-2 focus:outline-none transition-all duration-500 ${isDarkMode ? 'text-white placeholder-gray-500' : 'text-gray-900 placeholder-gray-400'
                                     }`}
                             />
                             <button

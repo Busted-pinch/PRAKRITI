@@ -3,7 +3,16 @@ import React, { createContext, useContext, useState } from 'react';
 const EnvironmentContext = createContext();
 
 export const EnvironmentProvider = ({ children }) => {
-    const [environmentalMode, setEnvironmentalMode] = useState(false);
+    // Initialize from localStorage or default to false
+    const [environmentalMode, setEnvironmentalModeState] = useState(() => {
+        const saved = localStorage.getItem('environmentalMode');
+        return saved === 'true';
+    });
+
+    const setEnvironmentalMode = (value) => {
+        setEnvironmentalModeState(value);
+        localStorage.setItem('environmentalMode', value.toString());
+    };
 
     return (
         <EnvironmentContext.Provider value={{ environmentalMode, setEnvironmentalMode }}>

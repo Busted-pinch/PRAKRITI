@@ -11,10 +11,13 @@ import { useTheme } from '../context/ThemeContext';
 import Footer from '../components/Footer';
 import GlassCard from '../components/GlassCard';
 import { useAuth } from '../context/AuthContext';
+import { useEnvironment } from '../context/EnvironmentContext';
 
 const LandingPage = () => {
     const { isDarkMode } = useTheme();
+    const { environmentalMode, setEnvironmentalMode } = useEnvironment();
     const { user } = useAuth(); // Check if user is logged in
+
 
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -30,17 +33,22 @@ const LandingPage = () => {
     };
 
     return (
-        <div className={`relative min-h-screen overflow-hidden transition-colors duration-1000 font-sans ${isDarkMode ? 'bg-[#0c0a09]' : 'bg-[#e7e5e4]'}`}>
+        <div className={`relative min-h-screen overflow-hidden transition-colors duration-1000 font-sans ${isDarkMode
+            ? 'bg-[#0c0a09]'
+            : (environmentalMode ? 'bg-transparent' : 'bg-[#e7e5e4]')
+            }`}>
 
             {/* Background */}
             <div className={`absolute inset-0 z-0 transition-opacity duration-1000 ${isDarkMode ? 'opacity-80' : 'opacity-60'}`}>
                 <Background3D />
             </div>
 
-            {/* Gradient Overlay for Text Readability */}
+            {/* Gradient Overlay for Text Readability - Hide in Env Mode */}
             <div className={`absolute inset-0 z-0 pointer-events-none bg-gradient-to-b ${isDarkMode
-                    ? 'from-black/10 via-transparent to-black/80'
-                    : 'from-white/10 via-transparent to-white/80'
+                ? 'from-black/10 via-transparent to-black/80'
+                : (environmentalMode
+                    ? 'from-transparent via-transparent to-transparent'
+                    : 'from-white/10 via-transparent to-white/80')
                 }`} />
 
             {/* 🔥 HERO SECTION */}
@@ -51,12 +59,18 @@ const LandingPage = () => {
                     animate="visible"
                     className="flex flex-col items-center max-w-5xl"
                 >
-                    <motion.div variants={itemVariants} className="mb-6 flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-md">
+                    <motion.div
+                        variants={itemVariants}
+                        className="mb-6 flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-md cursor-pointer hover:bg-emerald-500/20 transition-colors"
+                        onClick={() => setEnvironmentalMode(!environmentalMode)}
+                    >
                         <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${environmentalMode ? 'bg-emerald-400' : 'bg-gray-400'}`}></span>
+                            <span className={`relative inline-flex rounded-full h-2 w-2 ${environmentalMode ? 'bg-emerald-500' : 'bg-gray-500'}`}></span>
                         </span>
-                        <span className="text-xs font-bold tracking-widest text-emerald-500 uppercase">Live Environmental Intelligence</span>
+                        <span className={`text-xs font-bold tracking-widest uppercase ${environmentalMode ? 'text-emerald-500' : 'text-gray-500'}`}>
+                            {environmentalMode ? 'Environmental Mode: ON' : 'Environmental Mode: OFF'}
+                        </span>
                     </motion.div>
 
                     <motion.h1
@@ -244,8 +258,8 @@ const WorkStep = ({ step, title, desc, icon, isDarkMode }) => (
         className="relative flex flex-col items-center text-center group"
     >
         <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-bold mb-6 relative z-10 transition-all duration-300 ${isDarkMode
-                ? 'bg-gray-800 text-white border border-gray-700 group-hover:bg-emerald-600 group-hover:border-emerald-500'
-                : 'bg-white text-gray-900 border border-gray-200 group-hover:bg-emerald-500 group-hover:text-white'
+            ? 'bg-gray-800 text-white border border-gray-700 group-hover:bg-emerald-600 group-hover:border-emerald-500'
+            : 'bg-white text-gray-900 border border-gray-200 group-hover:bg-emerald-500 group-hover:text-white'
             }`}>
             {icon}
         </div>
