@@ -52,8 +52,9 @@ function AnimatedGlobe({ isDarkMode, environmentalMode }) {
 
     const getDistortColor = () => {
         if (environmentalMode) {
-            // Healthy: Vibrant Teal/Emerald
-            return isDarkMode ? "#10b981" : "#0ea5e9";
+            // Healthy: Vibrant Emerald/Teal Mix
+            // Dark mode: Uses a much lighter/brighter mint green for visibility against dark bg
+            return isDarkMode ? "#6ee7b7" : "#059669"; // Emerald-300 (Dark) or Emerald-600 (Light)
         }
         // Depleted: Desaturated Brown/Grey
         return isDarkMode ? "#4b5563" : "#d6d3d1";
@@ -71,12 +72,12 @@ function AnimatedGlobe({ isDarkMode, environmentalMode }) {
                     metalness={environmentalMode ? 0.9 : 0.1}
                     wireframe={true} // WIREFRAME FOR BOTH
                     transparent={true}
-                    opacity={environmentalMode ? (isDarkMode ? 0.4 : 0.2) : 0.1}
+                    opacity={environmentalMode ? (isDarkMode ? 0.8 : 0.15) : 0.1} // Reduced opacity for Light Mode Healthy (was 0.4)
                     toneMapped={false}
                 />
 
                 {/* Eco Points only in ON mode, attached to sphere to rotate with it */}
-                {environmentalMode && <EcoPoints count={80} />}
+                {environmentalMode && <EcoPoints count={isDarkMode ? 150 : 80} />}
             </Sphere>
 
             {/* Subtle Atmosphere Halo - Fixed size, visible in ON mode */}
@@ -84,9 +85,9 @@ function AnimatedGlobe({ isDarkMode, environmentalMode }) {
                 <mesh scale={[1.1, 1.1, 1.1]}>
                     <sphereGeometry args={[1, 32, 32]} />
                     <meshBasicMaterial
-                        color="#0ea5e9" // Sky blue
+                        color={isDarkMode ? "#34d399" : "#10b981"} // Brighter Emerald-400 in Dark Mode
                         transparent
-                        opacity={0.03}
+                        opacity={isDarkMode ? 0.15 : 0.05} // Increased opacity for visibility
                         side={THREE.BackSide}
                         wireframe={true}
                     />
@@ -110,9 +111,9 @@ function FloatingParticles({ isDarkMode, environmentalMode }) {
             <Stars
                 radius={80}
                 depth={20}
-                count={environmentalMode ? 1500 : 500}
+                count={environmentalMode ? 2000 : 500}
                 factor={4}
-                saturation={environmentalMode ? 0.8 : 0}
+                saturation={environmentalMode ? 0.9 : 0}
                 fade
                 speed={1}
             />
@@ -126,22 +127,22 @@ const Background3D = () => {
 
     return (
         <div className={`fixed inset-0 z-0 pointer-events-none transition-colors duration-2000 ${isDarkMode
-            ? 'bg-gradient-to-b from-gray-900 to-gray-950'
+            ? 'bg-gradient-to-b from-slate-900 to-slate-950'
             : 'bg-transparent'
             }`}>
             <div className={`absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] transition-opacity duration-1000 ${environmentalMode ? 'opacity-20' : 'opacity-40 brightness-50 contrast-150'} mix-blend-overlay`}></div>
 
             {/* Environmental Glow Overlay - Only in ON State */}
             <div className={`absolute inset-0 transition-opacity duration-2000 ${environmentalMode ? 'opacity-40' : 'opacity-0'} ${isDarkMode
-                ? 'bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-teal-900/50 via-transparent to-transparent'
-                : 'bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-teal-300/40 via-transparent to-transparent'
+                ? 'bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-emerald-900/40 via-transparent to-transparent'
+                : 'bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-emerald-300/30 via-transparent to-transparent'
                 }`} />
 
             {/* Depleted Shadow Overlay - Only in OFF State */}
             <div className={`absolute inset-0 transition-opacity duration-2000 ${!environmentalMode ? 'opacity-60' : 'opacity-0'} bg-black/20`} />
 
             <Canvas camera={{ position: [0, 0, 5] }}>
-                <ambientLight intensity={environmentalMode ? 1.0 : 0.3} />
+                <ambientLight intensity={environmentalMode ? (isDarkMode ? 0.8 : 1.2) : 0.3} />
                 <pointLight position={[10, 10, 10]} intensity={environmentalMode ? 1.5 : 0.5} />
                 <Suspense fallback={null}>
                     <AnimatedGlobe isDarkMode={isDarkMode} environmentalMode={environmentalMode} />
