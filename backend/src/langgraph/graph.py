@@ -5,6 +5,7 @@ import os
 from dotenv import load_dotenv
 
 from src.langgraph.state import UnifiedState
+from src.core.aggregate_data import AggregateData
 from src.langgraph.supervisor import supervisor_agent
 from src.langgraph.agents.environment_agent import environment_agent
 from src.langgraph.agents.digital_twin_agent import digital_twin_agent
@@ -14,7 +15,7 @@ from src.core.aggregate_data import Datastore
 load_dotenv()
 
 # Initialize Global Datastore Instance
-datastore = Datastore()
+datastore = AggregateData()
 
 # Bind datastore to agents to create callable nodes
 env_node = partial(environment_agent, datastore=datastore)
