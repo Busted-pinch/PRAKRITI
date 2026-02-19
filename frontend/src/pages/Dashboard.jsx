@@ -12,6 +12,7 @@ import {
     PieChart, Pie, Cell
 } from 'recharts';
 import { useTheme } from '../context/ThemeContext';
+import { useEnvironment } from '../context/EnvironmentContext';
 import GlassCard from '../components/GlassCard';
 import MapWidget from '../components/MapWidget';
 import Layout from '../components/Layout';
@@ -106,6 +107,7 @@ import DailyInsight from '../components/DailyInsight';
 
 const Dashboard = () => {
     const { isDarkMode } = useTheme();
+    const { environmentalMode, setEnvironmentalMode } = useEnvironment();
     const [userData, setUserData] = useState(null);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
@@ -214,6 +216,22 @@ const Dashboard = () => {
                             Your <span className="font-semibold text-emerald-500">{userData.persona.name}</span> eco-profile is active.
                         </p>
                     </div>
+
+                    {/* Environmental Mode Toggle */}
+                    <button
+                        onClick={() => setEnvironmentalMode(!environmentalMode)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${environmentalMode
+                            ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-500'
+                            : isDarkMode
+                                ? 'bg-white/5 border-white/10 text-gray-400'
+                                : 'bg-white border-gray-200 text-gray-500'
+                            }`}
+                    >
+                        <div className={`w-2 h-2 rounded-full ${environmentalMode ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+                        <span className="text-xs font-bold uppercase tracking-wider">
+                            {environmentalMode ? 'INT Mode: ON' : 'INT Mode: OFF'}
+                        </span>
+                    </button>
                 </div>
 
                 {/* Main Grid */}
@@ -247,7 +265,10 @@ const Dashboard = () => {
                     </GlassCard>
 
                     {/* Pie Chart */}
-                    <GlassCard className="md:col-span-4 p-6 min-h-[400px]">
+                    <GlassCard className={`md:col-span-4 p-6 min-h-[400px] transition-all duration-500 ${environmentalMode
+                            ? (isDarkMode ? 'shadow-[0_0_30px_-5px_rgba(16,185,129,0.3)] border-emerald-500/30' : 'shadow-[0_0_30px_-5px_rgba(16,185,129,0.4)] border-emerald-500/50')
+                            : ''
+                        }`}>
                         <h3 className="font-semibold text-lg flex items-center gap-2 mb-6">
                             <Wind className="w-5 h-5 text-blue-500" />
                             Respiratory Resilience

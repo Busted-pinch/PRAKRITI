@@ -41,7 +41,7 @@ export const AuthProvider = ({ children }) => {
         setError(null);
         try {
             const response = await api.post('/auth/login', { email, password });
-            const { access_token, user } = response.data; // Adjust based on actual API response
+            const { access_token } = response.data; // Adjust based on actual API response
 
             // Backend returns: { access_token, refresh_token, token_type }
             // /auth/me returns user data. 

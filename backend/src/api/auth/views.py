@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from .schemas import RegisterRequest, LoginRequest, RefreshRequest
 from src.api.deps import get_current_user, get_supabase_client
+from src.core.logger import logger
 from supabase import Client
 
 router = APIRouter()
@@ -21,9 +22,11 @@ async def register(data: RegisterRequest):
             }
         })
         if not res.user:
+            logger.error("Registration failed: No user returned from Supabase")
             raise HTTPException(status_code=400, detail="Registration failed")
         return {"message": "User registered successfully, please check your email for verification if enabled."}
     except Exception as e:
+        logger.error(f"Registration exception: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/login")
@@ -40,6 +43,7 @@ async def login(data: LoginRequest):
             "token_type": "bearer"
         }
     except Exception as e:
+        logger.error(f"Login exception: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/refresh")

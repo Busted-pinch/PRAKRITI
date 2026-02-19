@@ -3,13 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { motion } from 'framer-motion';
-import { Mail, Lock, User, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import Background3D from '../components/Background3D';
 
 const Signup = () => {
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [successMsg, setSuccessMsg] = useState('');
     const { signup, loading, error } = useAuth();
     const navigate = useNavigate();
@@ -39,8 +40,8 @@ const Signup = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8 }}
                     className={`rounded-3xl p-8 backdrop-blur-xl border shadow-2xl ${isDarkMode
-                            ? 'bg-white/5 border-white/10 shadow-emerald-900/20'
-                            : 'bg-white/60 border-white/40 shadow-emerald-100/50'
+                        ? 'bg-white/5 border-white/10 shadow-emerald-900/20'
+                        : 'bg-white/60 border-white/40 shadow-emerald-100/50'
                         }`}
                 >
                     <div className="text-center mb-8">
@@ -85,8 +86,8 @@ const Signup = () => {
                                     onChange={(e) => setFullName(e.target.value)}
                                     required
                                     className={`w-full pl-12 pr-4 py-3 rounded-xl outline-none transition-all ${isDarkMode
-                                            ? 'bg-white/5 border border-white/10 text-white focus:border-emerald-500/50 focus:bg-white/10'
-                                            : 'bg-white border border-gray-200 text-gray-900 focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10'
+                                        ? 'bg-white/5 border border-white/10 text-white focus:border-emerald-500/50 focus:bg-white/10'
+                                        : 'bg-white border border-gray-200 text-gray-900 focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10'
                                         }`}
                                     placeholder="John Doe"
                                 />
@@ -105,8 +106,8 @@ const Signup = () => {
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
                                     className={`w-full pl-12 pr-4 py-3 rounded-xl outline-none transition-all ${isDarkMode
-                                            ? 'bg-white/5 border border-white/10 text-white focus:border-emerald-500/50 focus:bg-white/10'
-                                            : 'bg-white border border-gray-200 text-gray-900 focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10'
+                                        ? 'bg-white/5 border border-white/10 text-white focus:border-emerald-500/50 focus:bg-white/10'
+                                        : 'bg-white border border-gray-200 text-gray-900 focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10'
                                         }`}
                                     placeholder="you@example.com"
                                 />
@@ -125,8 +126,8 @@ const Signup = () => {
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
                                     className={`w-full pl-12 pr-4 py-3 rounded-xl outline-none transition-all ${isDarkMode
-                                            ? 'bg-white/5 border border-white/10 text-white focus:border-emerald-500/50 focus:bg-white/10'
-                                            : 'bg-white border border-gray-200 text-gray-900 focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10'
+                                        ? 'bg-white/5 border border-white/10 text-white focus:border-emerald-500/50 focus:bg-white/10'
+                                        : 'bg-white border border-gray-200 text-gray-900 focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10'
                                         }`}
                                     placeholder="••••••••"
                                 />
