@@ -3,6 +3,8 @@ from typing import List, Dict, Any
 from src.api.deps import get_current_user, get_supabase_client
 from .schemas import ChatMessage
 import asyncio
+from langchain_core.messages import HumanMessage
+from src.langgraph.graph import app
 import json
 from loguru import logger
 
@@ -44,41 +46,6 @@ manager = ConnectionManager()
 # ---------------------------
 # HTTP Endpoints (MOCKED)
 # ---------------------------
-
-@router.post("/message")
-async def send_message(message: ChatMessage):
-    """
-    Mocked Chat Endpoint to bypass LangChain/Pydantic issues on Python 3.14.
-    """
-    initial_state = {
-        "messages": [HumanMessage(content=message.content)],
-        "user_id": current_user.get("id"),
-        "structured_data": {}
-    }
-    
-    # Run the graph
-    config = {"configurable": {"thread_id": str(current_user.get("id", "anonymous"))}}
-    result = await app.ainvoke(initial_state, config=config)
-    
-    # Extract the last message content
-    last_message = result["messages"][-1]
-    response_content = last_message.content if hasattr(last_message, "content") else str(last_message)
-    
-    # Simple keyword-based logic for demo
-    if "aqi" in user_msg and "300" in user_msg:
-        reply = "If the AQI reaches 300 (Severe), I recommend avoiding all outdoor physical activity. Indoor air purification is advised."
-    elif "monitor" in user_msg or "track" in user_msg:
-        reply = "I am tracking environmental metrics in real-time. Your local monitors are active."
-    elif "simulation" in user_msg or "what if" in user_msg:
-        reply = "I can run simulations for you. Try asking 'What if temperature rises by 2 degrees?'"
-    else:
-        reply = "I am Prakriti's Digital Twin. I can help you analyze environmental data and simulate future scenarios."
-
-    return {
-        "reply": reply,
-        "structured_data": {},
-        "agent_trace": "mock_agent"
-    }
 
 @router.get("/history")
 async def get_chat_history():

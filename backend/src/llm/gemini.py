@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def get_gemini_llm(model_name: str = "gemini-2.5-flash", temperature: float = 1.0):
+def get_gemini_llm(model_name: str = "gemini-2.5-flash-lite", temperature: float = 1.0):
     """
     Returns an instance of ChatGoogleGenerativeAI.
     
