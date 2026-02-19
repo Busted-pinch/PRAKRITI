@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 import Layout from './Layout';
 import {
     IntroStep,
@@ -66,20 +67,29 @@ const Questionnaire = () => {
             selected_interests: formData.selected_interests,
             hobbies: formData.hobbies,
             constraints: {
-                max_physical_intensity: formData.constraints.max_physical_intensity,
-                aqi_sensitivity: formData.constraints.aqi_sensitivity
+                max_physical_intensity: formData.constraints.max_physical_intensity || 'med',
+                aqi_sensitivity: formData.constraints.aqi_sensitivity || 'med'
             }
         };
 
         console.log("FINAL PAYLOAD:", JSON.stringify(payload, null, 2));
 
-        // Show completion animation
-        setStep(6);
+        try {
+            // Send to backend
+            await api.post('/user/onboarding', payload);
 
-        // Navigate to dashboard with payload after delay
-        setTimeout(() => {
-            navigate('/dashboard', { state: { submission: payload } });
-        }, 2000);
+            // Show completion animation
+            setStep(6);
+
+            // Navigate to dashboard with payload after delay
+            setTimeout(() => {
+                navigate('/dashboard', { state: { submission: payload } });
+            }, 2000);
+        } catch (error) {
+            console.error("Failed to submit assessment:", error);
+            // Optionally handle error UI here
+            alert("Failed to save assessment. Please try again.");
+        }
     };
 
     const steps = [

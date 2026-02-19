@@ -10,13 +10,13 @@ const Layout = ({ children }) => {
     const { isDarkMode } = useTheme();
 
     return (
-        <div className={`relative min-h-screen w-full overflow-hidden font-sans transition-colors duration-500 flex flex-col ${isDarkMode ? 'text-white bg-gray-900' : 'text-gray-900 bg-white'
+        <div className={`relative min-h-screen w-full overflow-hidden font-sans transition-colors duration-500 flex flex-col ${isDarkMode ? 'text-white bg-slate-950' : 'text-gray-900 bg-emerald-50/30'
             }`}>
             <Background3D />
 
             {/* Light Mode Gradient Overlay */}
             {!isDarkMode && (
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-sky-50 -z-10 pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-100/40 via-teal-100/40 to-cyan-100/40 -z-10 pointer-events-none" />
             )}
 
             {/* Content Container */}

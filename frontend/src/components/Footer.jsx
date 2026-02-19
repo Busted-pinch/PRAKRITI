@@ -19,7 +19,7 @@ const Footer = ({ simple = false }) => {
                                     <Leaf className={`w-6 h-6 ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
                                 </div>
                                 <span className={`text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                                    Prakriti
+                                    PRAKRITI
                                 </span>
                             </Link>
                             <p className="text-sm leading-relaxed max-w-xs">
