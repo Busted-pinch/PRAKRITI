@@ -1,11 +1,11 @@
 from typing import Dict, Any
 from langchain_core.messages import AIMessage, SystemMessage, HumanMessage
 from src.langgraph.state import UnifiedState
-from src.core.aggregate_data import Datastore
+from src.core.aggregate_data import AggregateData
 from src.llm.gemini import get_gemini_llm
 from loguru import logger
 
-async def environment_agent(state: UnifiedState, datastore: Datastore) -> Dict[str, Any]:
+async def environment_agent(state: UnifiedState, datastore: AggregateData) -> Dict[str, Any]:
     """
     Agent responsible for analyzing environmental data using LLM.
     """
