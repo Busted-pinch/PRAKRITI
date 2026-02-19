@@ -5,6 +5,8 @@ from src.api.deps import get_current_user
 from src.core.supabase_client import supabase
 from src.core.open_meteo_client import fetch_weather, fetch_air_quality
 from src.api.environment.utils import parse_hourly
+from src.core.aqi_service import calculate_cpcb_aqi, calculate_cpcb_aqi_instant
+
 from src.core.aggregate_data import AggregateData
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
@@ -24,17 +26,40 @@ async def get_current_environment(lat: float, lon: float):
     current_weather = weather.get("current", {})
     hourly_air = air.get("hourly", {})
 
+    # 1️⃣ Try rolling CPCB AQI (historical mode)
+    aqi_value, dominant, category = calculate_cpcb_aqi(lat, lon)
+
+    # 2️⃣ If no historical data → fallback to instant CPCB
+    if aqi_value is None:
+
+        instant_data = {
+            "pm2_5": hourly_air.get("pm2_5", [None])[0],
+            "pm10": hourly_air.get("pm10", [None])[0],
+            "nitrogen_dioxide": hourly_air.get("nitrogen_dioxide", [None])[0],
+            "sulphur_dioxide": hourly_air.get("sulphur_dioxide", [None])[0],
+            "ozone": hourly_air.get("ozone", [None])[0],
+            "carbon_monoxide": hourly_air.get("carbon_monoxide", [None])[0],
+        }
+
+        aqi_value, dominant, category = calculate_cpcb_aqi_instant(instant_data)
+
     return {
         "temperature": current_weather.get("temperature_2m"),
         "apparent_temperature": current_weather.get("apparent_temperature"),
         "humidity": current_weather.get("relative_humidity_2m"),
         "wind_speed": current_weather.get("wind_speed_10m"),
         "uv_index": current_weather.get("uv_index"),
+
         "pm2_5": hourly_air.get("pm2_5", [None])[0],
         "pm10": hourly_air.get("pm10", [None])[0],
         "ozone": hourly_air.get("ozone", [None])[0],
         "nitrogen_dioxide": hourly_air.get("nitrogen_dioxide", [None])[0],
+
+        "aqi": aqi_value,
+        "dominant_pollutant": dominant,
+        "aqi_category": category,
     }
+
 
 # ---------------------------------------
 # HOURLY FORECAST
