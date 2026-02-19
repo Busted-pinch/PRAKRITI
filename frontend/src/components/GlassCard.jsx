@@ -15,16 +15,16 @@ const GlassCard = ({ children, className, hoverEffect = true }) => {
             className={twMerge(
                 "group relative rounded-3xl border backdrop-blur-xl transition-all duration-500 overflow-hidden",
                 isDarkMode
-                    ? "bg-stone-900/60 border-white/10 shadow-xl shadow-black/20" // Dark Mode (Universal)
+                    ? "bg-slate-900/60 border-white/10 shadow-xl shadow-emerald-900/20" // Dark Mode (Universal)
                     : (environmentalMode
-                        ? "bg-white/70 border-emerald-200/50 shadow-lg shadow-teal-900/5" // Light Eco
-                        : "bg-white/60 border-white/40 shadow-xl shadow-emerald-900/5"), // Light Depleted
+                        ? "bg-white/80 border-emerald-400 shadow-[0_0_20px_-5px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_-5px_rgba(16,185,129,0.5)]" // Light Eco: Glowing Green Border & Shadow
+                        : "bg-white/60 border-white/40 shadow-xl shadow-slate-900/5"), // Light Depleted
                 className
             )}
         >
             {/* Premium Eco Hover Glow (Behind) */}
             {hoverEffect && (
-                <div className={`absolute inset-0 opacity-0 group-hover:opacity-40 transition-opacity duration-500 bg-gradient-to-br from-emerald-400/20 via-teal-400/20 to-blue-500/20 blur-xl pointer-events-none`} />
+                <div className={`absolute inset-0 opacity-0 group-hover:opacity-40 transition-opacity duration-500 bg-gradient-to-br from-emerald-400/20 via-teal-400/20 to-cyan-500/20 blur-xl pointer-events-none`} />
             )}
 
             <div className="relative z-10">

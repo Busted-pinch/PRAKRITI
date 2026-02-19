@@ -29,14 +29,14 @@ const Contact = () => {
                             isDarkMode={isDarkMode}
                         />
                         <ContactInfoCard
-                            icon={<Phone className="w-6 h-6 text-blue-500" />}
+                            icon={<Phone className="w-6 h-6 text-teal-500" />}
                             title="Call Us"
                             content="+1 (555) 123-4567"
                             subContent="Mon-Fri, 9am-6pm EST"
                             isDarkMode={isDarkMode}
                         />
                         <ContactInfoCard
-                            icon={<MapPin className="w-6 h-6 text-purple-500" />}
+                            icon={<MapPin className="w-6 h-6 text-cyan-500" />}
                             title="Visit Us"
                             content="123 Nature Way, Eco City"
                             subContent="Earth, 10001"

@@ -5,7 +5,7 @@ from src.core.supabase_client import supabase
 from src.schemas.aggregate import EnvironmentData, SessionData, UserData
 
 
-class AggregateData:
+class Datastore:
     """
     Central datastore for Supabase access, external APIs, and caching.
     """

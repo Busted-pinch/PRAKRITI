@@ -3,7 +3,7 @@ from .schemas import SimulationRequest, SimulationResult
 from src.api.deps import get_current_user
 import uuid
 
-router = APIRouter(dependencies=[Depends(get_current_user)])
+router = APIRouter()
 
 @router.post("/run", response_model=SimulationResult)
 async def run_simulation(data: SimulationRequest):

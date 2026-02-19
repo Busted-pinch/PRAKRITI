@@ -1,9 +1,11 @@
 import React, { useRef, useMemo, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Sphere, MeshDistortMaterial, Stars, PointMaterial, Points } from '@react-three/drei';
+import { useLocation } from 'react-router-dom';
 import * as THREE from 'three';
 import { useTheme } from '../context/ThemeContext';
 import { useEnvironment } from '../context/EnvironmentContext';
+import VantaFog from './VantaFog';
 
 function EcoPoints({ count = 100 }) {
     const points = useMemo(() => {
@@ -34,59 +36,102 @@ function EcoPoints({ count = 100 }) {
     );
 }
 
-function AnimatedGlobe({ isDarkMode, environmentalMode }) {
+// Interpolation helper
+const lerp = (start, end, t) => start * (1 - t) + end * t;
+
+function AnimatedGlobe({ isDarkMode, environmentalMode, isLandingPage }) {
     const sphereRef = useRef();
     const groupRef = useRef();
 
+    // Refs for transition state
+    const transitionRef = useRef({
+        distort: 0.4,
+        scale: 2.5,
+        colorR: 0, colorG: 0, colorB: 0, // Will be set on first frame
+        roughness: 0.7,
+        metalness: 0.1,
+        opacity: 0.1
+    });
+
     useFrame((state, delta) => {
-        if (sphereRef.current) {
-            // Constant, slow, steady rotation for both modes
-            // No wobble, no random speed. Just a planet rotating.
-            sphereRef.current.rotation.y += delta * 0.05;
-        }
+        if (!sphereRef.current) return;
+
+        // constant rotation
+        sphereRef.current.rotation.y += delta * 0.05;
+
+        // Target values
+        const targetDistort = environmentalMode ? 0 : 0.4;
+        const targetScale = environmentalMode ? 2.8 : 2.5;
+        const targetRoughness = environmentalMode ? 0.1 : 0.7;
+        const targetMetalness = environmentalMode ? 0.9 : 0.1;
+
+        // Colors
+        // OFF (Depleted): #4b5563 (Dark) or #d6d3d1 (Light) -> RGB
+        // ON (Healthy): #6ee7b7 (Dark) or #10b981 (Light - Brighter Emerald-500)
+        const targetColor = new THREE.Color(
+            environmentalMode
+                ? (isDarkMode ? "#6ee7b7" : "#10b981")
+                : (isDarkMode ? "#4b5563" : "#d6d3d1")
+        );
+
+        const targetOpacity = environmentalMode ? (isDarkMode ? 0.8 : 0.15) : 0.1;
+
+        // Interpolation speed
+        const speed = 2.0 * delta;
+
+        // Smoothly update values
+        const current = transitionRef.current;
+        current.distort = lerp(current.distort, targetDistort, speed);
+        current.scale = lerp(current.scale, targetScale, speed);
+        current.roughness = lerp(current.roughness, targetRoughness, speed);
+        current.metalness = lerp(current.metalness, targetMetalness, speed);
+        current.opacity = lerp(current.opacity, targetOpacity, speed);
+
+        // Update material properties
+        const material = sphereRef.current.material;
+        material.distort = current.distort;
+        material.roughness = current.roughness;
+        material.metalness = current.metalness;
+        material.opacity = current.opacity;
+
+        // Color interpolation
+        material.color.lerp(targetColor, speed);
+
+        // Group scale
         if (groupRef.current) {
-            // Subtle floating for the whole group, very slow
+            groupRef.current.scale.setScalar(current.scale);
             groupRef.current.rotation.z = Math.sin(state.clock.getElapsedTime() * 0.05) * 0.05;
         }
     });
 
-    const getDistortColor = () => {
-        if (environmentalMode) {
-            // Healthy: Vibrant Teal/Emerald
-            return isDarkMode ? "#10b981" : "#0ea5e9";
-        }
-        // Depleted: Desaturated Brown/Grey
-        return isDarkMode ? "#4b5563" : "#d6d3d1";
-    };
-
     return (
-        <group ref={groupRef} scale={environmentalMode ? 2.8 : 2.5}>
+        <group ref={groupRef}>
             <Sphere ref={sphereRef} args={[1, 64, 64]}>
                 <MeshDistortMaterial
-                    color={getDistortColor()}
+                    color={"#d6d3d1"} // Initial color, will be overridden by lerp
                     attach="material"
-                    distort={environmentalMode ? 0 : 0.4} // Stable in ON mode, Distorted in OFF
-                    speed={environmentalMode ? 0 : 2} // No distortion movement in ON mode
-                    roughness={environmentalMode ? 0.1 : 0.7}
-                    metalness={environmentalMode ? 0.9 : 0.1}
-                    wireframe={true} // WIREFRAME FOR BOTH
+                    distort={0.4}
+                    speed={environmentalMode ? 0 : 2} // Keep speed logic instant for now or interpolate too
+                    roughness={0.7}
+                    metalness={0.1}
+                    wireframe={true}
                     transparent={true}
-                    opacity={environmentalMode ? (isDarkMode ? 0.4 : 0.2) : 0.1}
+                    opacity={0.1}
                     toneMapped={false}
                 />
 
-                {/* Eco Points only in ON mode, attached to sphere to rotate with it */}
-                {environmentalMode && <EcoPoints count={80} />}
+                {/* Eco Points - Fade in/out could be added here, currently instant on/off */}
+                {environmentalMode && <EcoPoints count={isDarkMode ? 150 : 80} />}
             </Sphere>
 
-            {/* Subtle Atmosphere Halo - Fixed size, visible in ON mode */}
+            {/* Subtle Atmosphere Halo */}
             {environmentalMode && (
                 <mesh scale={[1.1, 1.1, 1.1]}>
                     <sphereGeometry args={[1, 32, 32]} />
                     <meshBasicMaterial
-                        color="#0ea5e9" // Sky blue
+                        color={isDarkMode ? "#34d399" : "#10b981"}
                         transparent
-                        opacity={0.03}
+                        opacity={isDarkMode ? 0.15 : 0.05}
                         side={THREE.BackSide}
                         wireframe={true}
                     />
@@ -110,9 +155,9 @@ function FloatingParticles({ isDarkMode, environmentalMode }) {
             <Stars
                 radius={80}
                 depth={20}
-                count={environmentalMode ? 1500 : 500}
+                count={environmentalMode ? 2000 : 500}
                 factor={4}
-                saturation={environmentalMode ? 0.8 : 0}
+                saturation={environmentalMode ? 0.9 : 0}
                 fade
                 speed={1}
             />
@@ -123,28 +168,43 @@ function FloatingParticles({ isDarkMode, environmentalMode }) {
 const Background3D = () => {
     const { isDarkMode } = useTheme();
     const { environmentalMode } = useEnvironment();
+    const location = useLocation();
+    const isLandingPage = location.pathname === '/';
 
     return (
         <div className={`fixed inset-0 z-0 pointer-events-none transition-colors duration-2000 ${isDarkMode
-            ? 'bg-gradient-to-b from-gray-900 to-gray-950'
-            : 'bg-transparent'
+            ? 'bg-gradient-to-b from-slate-900 to-slate-950'
+            : (environmentalMode
+                ? 'bg-gradient-to-br from-emerald-100 via-teal-100 to-blue-100'
+                : 'bg-transparent')
             }`}>
-            <div className={`absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] transition-opacity duration-1000 ${environmentalMode ? 'opacity-20' : 'opacity-40 brightness-50 contrast-150'} mix-blend-overlay`}></div>
+            <div className={`absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] transition-opacity duration-1000 ${environmentalMode
+                ? (isLandingPage && !isDarkMode ? 'opacity-0' : 'opacity-20')
+                : 'opacity-40 brightness-50 contrast-150'
+                } mix-blend-overlay`}></div>
 
-            {/* Environmental Glow Overlay - Only in ON State */}
-            <div className={`absolute inset-0 transition-opacity duration-2000 ${environmentalMode ? 'opacity-40' : 'opacity-0'} ${isDarkMode
-                ? 'bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-teal-900/50 via-transparent to-transparent'
-                : 'bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-teal-300/40 via-transparent to-transparent'
+            {/* Environmental Glow Overlay - Only in ON State - Hide for Vanta on Landing */}
+            <div className={`absolute inset-0 transition-opacity duration-2000 ${environmentalMode && !(isLandingPage && !isDarkMode) ? 'opacity-40' : 'opacity-0'
+                } ${isDarkMode
+                    ? 'bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-emerald-900/40 via-transparent to-transparent'
+                    : 'bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-emerald-300/30 via-transparent to-transparent'
                 }`} />
+
+            {/* Vanta Fog - Only in Light Mode + Environmental Mode */}
+            {!isDarkMode && environmentalMode && (
+                <div className="absolute inset-0 z-0 opacity-60">
+                    <VantaFog />
+                </div>
+            )}
 
             {/* Depleted Shadow Overlay - Only in OFF State */}
             <div className={`absolute inset-0 transition-opacity duration-2000 ${!environmentalMode ? 'opacity-60' : 'opacity-0'} bg-black/20`} />
 
             <Canvas camera={{ position: [0, 0, 5] }}>
-                <ambientLight intensity={environmentalMode ? 1.0 : 0.3} />
+                <ambientLight intensity={environmentalMode ? (isDarkMode ? 0.8 : 1.2) : 0.3} />
                 <pointLight position={[10, 10, 10]} intensity={environmentalMode ? 1.5 : 0.5} />
                 <Suspense fallback={null}>
-                    <AnimatedGlobe isDarkMode={isDarkMode} environmentalMode={environmentalMode} />
+                    <AnimatedGlobe isDarkMode={isDarkMode} environmentalMode={environmentalMode} isLandingPage={isLandingPage} />
                 </Suspense>
                 <FloatingParticles isDarkMode={isDarkMode} environmentalMode={environmentalMode} />
             </Canvas>

@@ -6,17 +6,22 @@ import { motion } from 'framer-motion';
 
 import Footer from './Footer';
 
+import { useEnvironment } from '../context/EnvironmentContext';
+
 const Layout = ({ children }) => {
     const { isDarkMode } = useTheme();
+    const { environmentalMode } = useEnvironment();
 
     return (
-        <div className={`relative min-h-screen w-full overflow-hidden font-sans transition-colors duration-500 flex flex-col ${isDarkMode ? 'text-white bg-gray-900' : 'text-gray-900 bg-white'
+        <div className={`relative min-h-screen w-full overflow-hidden font-sans transition-colors duration-500 flex flex-col ${isDarkMode
+            ? 'text-white bg-slate-950'
+            : (environmentalMode ? 'text-gray-900 bg-transparent' : 'text-gray-900 bg-emerald-50/30')
             }`}>
             <Background3D />
 
-            {/* Light Mode Gradient Overlay */}
-            {!isDarkMode && (
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-sky-50 -z-10 pointer-events-none" />
+            {/* Light Mode Gradient Overlay - Hide in Env Mode as Vanta takes over */}
+            {!isDarkMode && !environmentalMode && (
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-100/40 via-teal-100/40 to-cyan-100/40 -z-10 pointer-events-none" />
             )}
 
             {/* Content Container */}
@@ -26,7 +31,7 @@ const Layout = ({ children }) => {
                 transition={{ duration: 0.5 }}
                 className="relative z-10 flex flex-col flex-grow"
             >
-                <div className="flex-grow flex flex-col p-4 sm:p-6 md:p-8 lg:p-12 mt-16 sm:mt-0">
+                <div className="flex-grow flex flex-col p-4 sm:p-6 md:p-8 lg:p-12 pt-32">
                     {children}
                 </div>
             </motion.div>
