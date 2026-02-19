@@ -189,3 +189,5 @@
 2026-02-19 17:51:30.698 | DEBUG    | src.api.chat.views:websocket_endpoint:151 - WebSocket: Stream complete for 7ec31b78-9470-405c-8060-c58136dacb0c
 2026-02-19 17:52:39.174 | INFO     | src.api.chat.views:disconnect:38 - WebSocket: User 7ec31b78-9470-405c-8060-c58136dacb0c disconnected
 2026-02-19 17:52:39.282 | INFO     | src.main:shutdown_event:43 - Application shutdown
+2026-02-19 17:53:39.275 | INFO     | src.main:shutdown_event:43 - Application shutdown
+2026-02-19 17:53:54.074 | INFO     | src.main:startup_event:39 - Application startup
