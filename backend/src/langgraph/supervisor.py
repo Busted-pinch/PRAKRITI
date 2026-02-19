@@ -5,6 +5,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from src.langgraph.state import UnifiedState
 from src.llm.gemini import get_gemini_llm
 import json
+from loguru import logger
 
 # Registry to hold available agents and their descriptions
 AGENT_REGISTRY = {
@@ -26,18 +27,20 @@ async def supervisor_agent(state: UnifiedState, datastore: Any) -> Dict[str, Any
     """
     The Supervisor Agent that orchestrates the workflow using LLM.
     """
+    logger.info("Supervisor: routing user request")
     messages = state["messages"]
     last_message = messages[-1]
     
     # Validation: If last message is from Assistant (Agent), we probably finish or ask user
     if not isinstance(last_message, HumanMessage):
+        logger.debug("Supervisor: Last message was not human, finishing turn")
         return {"next_agent": "FINISH"}
 
     llm = get_gemini_llm()
     
     # Fallback to keyword matching query if LLM is not available
     if not llm:
-        print("Supervisor: LLM not available, using fallback.")
+        logger.warning("Supervisor: LLM not available, using fallback")
         # ... (Fallback logic details omitted for brevity, defaulting to chatbot) ...
         return {"next_agent": "chatbot"}
 
@@ -56,6 +59,7 @@ async def supervisor_agent(state: UnifiedState, datastore: Any) -> Dict[str, Any
     )
     
     try:
+        logger.info("Supervisor: Invoking LLM for routing")
         response = await llm.ainvoke([
             SystemMessage(content=system_prompt),
             last_message
@@ -73,11 +77,13 @@ async def supervisor_agent(state: UnifiedState, datastore: Any) -> Dict[str, Any
         
         # Verify agent exists
         if next_agent not in AGENT_REGISTRY and next_agent != "FINISH":
-            print(f"Supervisor: Invalid agent '{next_agent}' selected by LLM. Defaulting to chatbot.")
+            logger.warning(f"Supervisor: Invalid agent '{next_agent}' selected by LLM. Defaulting to chatbot.")
             next_agent = "chatbot"
+        else:
+            logger.info(f"Supervisor: Routed to {next_agent}")
             
     except Exception as e:
-        print(f"Supervisor Error: {e}")
+        logger.error(f"Supervisor Error: {e}")
         next_agent = "chatbot"
 
     return {"next_agent": next_agent}

@@ -1,19 +1,29 @@
 from typing import Dict, Any
-from langchain_core.messages import AIMessage, SystemMessage
+from langchain_core.messages import AIMessage, SystemMessage, HumanMessage
 from src.langgraph.state import UnifiedState
 from src.core.aggregate_data import Datastore
 from src.llm.gemini import get_gemini_llm
+from loguru import logger
 
 async def micro_learning_agent(state: UnifiedState, datastore: Datastore) -> Dict[str, Any]:
     """
     Agent responsible for delivering micro-learning content using LLM.
     """
-    user_id = state.get("user_id", "default_user")
-    user_info = await datastore.get_user_info(user_id)
+    logger.info("Micro Learning Agent: Started generation")
+    user_id = state.get("user_id")
+    user_info = None
+    if user_id:
+        try:
+             user_info = datastore.get_user(user_id)
+             logger.debug(f"Micro Learning: Fetched user info for {user_id}")
+        except Exception as e:
+             logger.warning(f"Micro Learning: Failed to fetch user info: {e}")
+             pass
     
     llm = get_gemini_llm()
     
     if not llm:
+        logger.warning("Micro Learning: LLM unavailable, returning static content")
         topic = "Sustainability"
         content = "Tip: Reduce, Reuse, Recycle."
         return {
@@ -21,19 +31,25 @@ async def micro_learning_agent(state: UnifiedState, datastore: Datastore) -> Dic
              "messages": [AIMessage(content=content)]
         }
 
-    prompt = (
-        f"Generate a short, engaging micro-learning fact or tip about the environment for this user.\n"
-        f"User Preferences: {user_info.get('preferences')}\n"
-        "Keep it under 2 sentences. Make it actionable."
+    system_prompt = "You are a helpful environmental educator. Generate a short, engaging micro-learning fact or tip."
+    human_prompt = (
+        f"User Preferences: {user_info.home_location if user_info else 'General'}\n"
+        "Generate a tip under 2 sentences. Make it actionable."
     )
     
     try:
-        response = await llm.ainvoke([SystemMessage(content=prompt)])
+        logger.info("Micro Learning: Invoking LLM")
+        response = await llm.ainvoke([
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=human_prompt)
+        ])
+        logger.info("Micro Learning: LLM response received")
         return {
             "structured_data": {"learning_content": {"generated": True}},
             "messages": [response]
         }
     except Exception as e:
+         logger.error(f"Micro Learning Error: {e}")
          return {
             "structured_data": {"error": str(e)},
             "messages": [AIMessage(content="Error generating learning content.")]

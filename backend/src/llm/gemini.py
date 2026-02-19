@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def get_gemini_llm(model_name: str = "gemini-pro", temperature: float = 0.7):
+def get_gemini_llm(model_name: str = "gemini-2.5-flash", temperature: float = 1.0):
     """
     Returns an instance of ChatGoogleGenerativeAI.
     
@@ -26,8 +26,10 @@ def get_gemini_llm(model_name: str = "gemini-pro", temperature: float = 0.7):
         llm = ChatGoogleGenerativeAI(
             model=model_name,
             temperature=temperature,
-            google_api_key=api_key,
-            convert_system_message_to_human=True # Helper for some models
+            max_tokens=2048,
+            timeout=None,
+            max_retries=3,
+            vertexai=None
         )
         return llm
     except Exception as e:
