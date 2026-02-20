@@ -5,66 +5,47 @@ from src.core.aggregate_data import AggregateData
 from src.llm.gemini import get_gemini_llm
 from loguru import logger
 
+
 async def chatbot_agent(state: UnifiedState, datastore: AggregateData) -> Dict[str, Any]:
     """
-    Agent responsible for general conversation, intent matching, and tracking user state using LLM.
+    General conversational chatbot.
+    Now risk-context aware.
     """
+
     logger.info("Chatbot Agent: Started processing")
+
     messages = state["messages"]
-    
     llm = get_gemini_llm()
-    
+    twin_context = state.get("structured_data", {}).get("llm_context", {})
+
     if not llm:
-        logger.warning("Chatbot: LLM unavailable")
         return {
-            "structured_data": {"confidence": 0.0, "error": "LLM_UNAVAILABLE"},
-            "messages": [AIMessage(content="I'm having trouble connecting to my brain right now. Please check my API key.")]
+            "structured_data": {"confidence": 0.0},
+            "messages": [
+                AIMessage(content="I'm having trouble accessing my intelligence layer right now.")
+            ]
         }
-
-
-    # Fetch User Context
-    user_id = state.get("user_id")
-    user_name = "Friend"
-    user_data = None
-    
-    if user_id:
-        try:
-            user_data = datastore.get_user(user_id)
-            if user_data and user_data.name:
-                user_name = user_data.name
-            logger.debug(f"Chatbot: Fetched user data for {user_id}")
-        except Exception as e:
-            logger.error(f"Chatbot Agent: Error fetching user data: {e}")
 
     system_prompt = (
-        f"You are Prakriti, a knowledgeable and friendly environmental assistant.\n"
-        f"You are talking to {user_name}.\n"
-        "Your goal is to help users understand environmental data, sustainability, and their impact.\n"
-        "Be concise, encouraging, and scientifically accurate.\n"
-        "If the user asks about something specific like weather or simulations, briefly acknowledge it and "
-        "mention that you can help them analyze that if they ask specifically (knowing the supervisor directs those tasks)."
+        "You are Prakriti, a friendly environmental assistant.\n"
+        "Be concise, supportive, and scientifically grounded.\n"
+        f"User Environmental Risk Context: {twin_context}\n"
+        "Adjust tone subtly if risk level is high."
     )
-    
+
     try:
-        # Combine system prompt with history
-        conversation = [SystemMessage(content=system_prompt)] + messages
-        
-        logger.info("Chatbot: Invoking LLM")
-        response = await llm.ainvoke(conversation)
-        logger.info("Chatbot: LLM response received")
-        
+        response = await llm.ainvoke(
+            [SystemMessage(content=system_prompt)] + messages
+        )
+
         return {
-            "structured_data": {
-                "behavioral_drift": 0.0, # Placeholder for more advanced logic
-                "confidence": 1.0, 
-                "intent": "general_chat"
-            },
+            "structured_data": {"confidence": 1.0},
             "messages": [response]
         }
-    except Exception as e:
-         logger.error(f"Chatbot Error: {e}")
-         return {
-            "structured_data": {"error": str(e)},
-            "messages": [AIMessage(content="I encountered an error while thinking.")]
-        }
 
+    except Exception as e:
+        logger.error(f"Chatbot Error: {e}")
+        return {
+            "structured_data": {"error": str(e)},
+            "messages": [AIMessage(content="I encountered an error while responding.")]
+        }
