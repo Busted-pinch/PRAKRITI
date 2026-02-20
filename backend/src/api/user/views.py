@@ -57,6 +57,7 @@ async def onboarding(payload: OnboardingPayload, current_user = Depends(get_curr
         "traits": [t.dict() for t in traits],
         "hobbies": payload.hobbies,
         "interests": payload.selected_interests,
+        "diseases": payload.diseases,
         "constraints": payload.constraints.dict(),
         "twin_status": "optimizing"
     }
@@ -91,9 +92,22 @@ async def get_profile(current_user = Depends(get_current_user)):
 async def update_profile(data: ProfileUpdate, current_user = Depends(get_current_user)):
     user_id = current_user.id if hasattr(current_user, 'id') else (current_user.get("sub") or current_user.get("id"))
     if user_id in USER_DB:
-        # Update fields
-        pass # Implement update logic
-    return {"message": "Profile updated", "data": data}
+        profile = USER_DB[user_id]
+        if data.name is not None:
+            profile["name"] = data.name
+        if data.hobbies is not None:
+            profile["hobbies"] = data.hobbies
+        if data.interests is not None:
+            profile["interests"] = data.interests
+        if data.diseases is not None:
+            profile["diseases"] = data.diseases
+        if data.constraints is not None:
+            profile["constraints"] = data.constraints.dict()
+            # Recalculate persona when constraints change
+            profile["persona"] = calculate_persona(data.constraints).dict()
+        return {"message": "Profile updated", "profile": profile}
+    
+    raise HTTPException(status_code=404, detail="Profile not found")
 
 @router.get("/twin")
 async def get_twin_state(current_user = Depends(get_current_user)):

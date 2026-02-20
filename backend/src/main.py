@@ -13,6 +13,8 @@ from src.api.session.views import router as session_router
 from src.api.interaction.views import router as interaction_router
 from src.api.behavior.views import router as system_behavior_router
 from src.api.user.behavior.views import router as user_behavior_router
+from src.api.news.views import router as news_router
+from src.api.law.views import router as law_router
 
 
 
@@ -49,6 +51,8 @@ app.include_router(privacy_router, prefix="/privacy", tags=["Privacy"])
 app.include_router(internal_router, prefix="/internal", tags=["Internal"])
 app.include_router(user_behavior_router, prefix="/user", tags=["User Attributes"])
 app.include_router(system_behavior_router, prefix="/behavior", tags=["Behavior"])
+app.include_router(news_router, prefix="/news", tags=["News Intelligence"])
+app.include_router(law_router, prefix="/law", tags=["Law & Policy"])
 
 
 
@@ -66,8 +70,5 @@ async def root():
     return {"message": "Hello Techathon"}
 
 app.include_router(session_router, prefix="/session", tags=["Session"])
-
-app.include_router(behavior_router, prefix="/behavior", tags=["Behavior"])
-
 app.include_router(interaction_router, prefix="/interaction", tags=["Interaction"])
 
