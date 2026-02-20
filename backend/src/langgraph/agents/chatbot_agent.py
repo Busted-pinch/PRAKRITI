@@ -1,12 +1,11 @@
 from typing import Dict, Any
 from langchain_core.messages import AIMessage, SystemMessage
 from src.langgraph.state import UnifiedState
-from src.core.aggregate_data import Datastore
-from src.core.aggregate_data import Datastore
+from src.core.aggregate_data import AggregateData
 from src.llm.gemini import get_gemini_llm
 from loguru import logger
 
-async def chatbot_agent(state: UnifiedState, datastore: Datastore) -> Dict[str, Any]:
+async def chatbot_agent(state: UnifiedState, datastore: AggregateData) -> Dict[str, Any]:
     """
     Agent responsible for general conversation, intent matching, and tracking user state using LLM.
     """

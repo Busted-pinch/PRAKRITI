@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from src.core.logger import logger
+from src.core.redis import get_redis_client
 from src.api.auth.views import router as auth_router
 from src.api.user.views import router as user_router
 from src.api.environment.views import router as environment_router
@@ -59,6 +60,11 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     logger.info("Application shutdown")
+    try:
+        client = await get_redis_client()
+        await client.aclose()
+    except:
+        pass
 
 @app.get("/")
 async def root():
@@ -66,8 +72,5 @@ async def root():
     return {"message": "Hello Techathon"}
 
 app.include_router(session_router, prefix="/session", tags=["Session"])
-
-
-
 app.include_router(interaction_router, prefix="/interaction", tags=["Interaction"])
 

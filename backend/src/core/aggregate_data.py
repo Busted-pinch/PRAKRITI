@@ -1,12 +1,12 @@
 from typing import Optional
 import requests
-
+from src.core.cache import get_cache, set_cache
 from src.core.supabase_client import supabase
 from src.schemas.aggregate import EnvironmentData, SessionData, UserData
 from src.api.environment.services import fetch_environment_from_api
 
 
-class Datastore:
+class AggregateData:
     """
     Central datastore for Supabase access, external APIs, and caching.
     """
@@ -45,6 +45,96 @@ class Datastore:
             return SessionData(**res.data)
         return None
     
+    # ---------- WEATHER DATA ----------
+    async def get_weather_data(self, location: str):
+        """
+        Fetch latest weather snapshot from environmental_readings.
+        """
+        res = (
+            supabase
+            .table("environmental_readings")
+            .select("data_type, readings")
+            .eq("is_forecast", False)
+            .order("recorded_at", desc=True)
+            .limit(50)
+            .execute()
+        )
+
+        weather = {}
+
+        for row in res.data or []:
+            param = row.get("data_type")
+            value = row.get("readings", {}).get("value")
+
+            if value is None:
+                continue
+
+            if param == "temperature_2m" and "temperature" not in weather:
+                weather["temperature"] = value
+            elif param == "relative_humidity_2m" and "humidity" not in weather:
+                weather["humidity"] = value
+            elif param == "wind_speed_10m" and "wind_speed" not in weather:
+                weather["wind_speed"] = value
+            elif param == "uv_index" and "uv_index" not in weather:
+                weather["uv_index"] = value
+
+        return weather
+    
+    # ---------- CLIMATE INFO ----------
+    async def get_climate_info(self, location: str):
+        """
+        Return simple derived climate stats.
+        """
+        res = (
+            supabase
+            .table("environmental_readings")
+            .select("readings")
+            .eq("data_type", "pm2_5")
+            .eq("is_forecast", False)
+            .limit(100)
+            .execute()
+        )
+
+        values = [
+            float(row["readings"]["value"])
+            for row in res.data or []
+            if row.get("readings", {}).get("value") is not None
+        ]
+
+        avg_pm25 = sum(values) / len(values) if values else None
+
+        return {
+            "average_pm2_5": avg_pm25,
+            "air_quality_level": (
+                "Good" if avg_pm25 and avg_pm25 < 50
+                else "Moderate" if avg_pm25 and avg_pm25 < 100
+                else "Poor"
+            )
+        }
+    # ---------- USER INFO ----------
+    async def get_user_info(self, user_id: str):
+        """
+        Fetch profile preferences for personalization.
+        """
+        res = (
+            supabase
+            .table("profiles")
+            .select("*")
+            .eq("id", user_id)
+            .single()
+            .execute()
+        )
+
+        if not res.data:
+            return {}
+
+        return {
+            "id": res.data["id"],
+            "preferences": res.data.get("preferences", {}),
+            "settings": res.data.get("settings", {})
+        }
+
+    
     # ---------- USER BEHAVIOR ----------
     def get_user_behavior(self, user_id: str):
 
@@ -75,7 +165,8 @@ class Datastore:
 
 
     # ---------- UNIFIED SMART FETCH ----------
-    def get_or_fetch_environment(
+
+    async def get_or_fetch_environment(
         self,
         session_id: str,
         lat: float,
@@ -83,19 +174,21 @@ class Datastore:
         forecast: bool = False
     ) -> Optional[EnvironmentData]:
 
-        # 1️⃣ Ensure session exists
-        session = self.get_session(session_id)
-        if not session:
-            return None
+        cache_key = f"env:{lat}:{lon}:{forecast}"
 
-        # 2️⃣ Try fetching from JSON-based environmental_readings
+        # 1️⃣ Redis first
+        cached = await get_cache(cache_key)
+        if cached:
+            return EnvironmentData(**cached)
+
+        # 2️⃣ Database fallback
         response = (
             supabase
             .table("environmental_readings")
             .select("data_type, readings")
             .eq("is_forecast", forecast)
             .eq("location->>lat", str(lat))
-            .eq("location->>long", str(lon))
+            .eq("location->>lon", str(lon))
             .order("recorded_at", desc=True)
             .limit(100)
             .execute()
@@ -103,65 +196,21 @@ class Datastore:
 
         env_dict = {}
 
-        if response.data:
-            for row in response.data:
-                param = row.get("data_type")
-                value = row.get("readings", {}).get("value")
+        for row in response.data or []:
+            param = row.get("data_type")
+            value = row.get("readings", {}).get("value")
+            if value is None:
+                continue
 
-                if value is None:
-                    continue
+            if param not in env_dict:
+                env_dict[param] = value
 
-                # Only assign first occurrence (latest due to DESC order)
-
-                if param == "temperature_2m" and "temperature" not in env_dict:
-                    env_dict["temperature"] = value
-
-                elif param == "apparent_temperature" and "apparent_temperature" not in env_dict:
-                    env_dict["apparent_temperature"] = value
-
-                elif param == "relative_humidity_2m" and "humidity" not in env_dict:
-                    env_dict["humidity"] = value
-
-                elif param == "wind_speed_10m" and "wind_speed" not in env_dict:
-                    env_dict["wind_speed"] = value
-
-                elif param == "uv_index" and "uv_index" not in env_dict:
-                    env_dict["uv_index"] = value
-
-                elif param == "pm2_5" and "pm2_5" not in env_dict:
-                    env_dict["pm2_5"] = value
-
-                elif param == "pm10" and "pm10" not in env_dict:
-                    env_dict["pm10"] = value
-
-                elif param == "ozone" and "ozone" not in env_dict:
-                    env_dict["ozone"] = value
-
-                elif param == "nitrogen_dioxide" and "nitrogen_dioxide" not in env_dict:
-                    env_dict["nitrogen_dioxide"] = value
-
-                elif param == "carbon_monoxide" and "carbon_monoxide" not in env_dict:
-                    env_dict["carbon_monoxide"] = value
-
-        # 3️⃣ If DB has values → return structured snapshot
         if env_dict:
-            return EnvironmentData(
-                session_id=session_id,
-                **env_dict,
-            )
+            snapshot = EnvironmentData(session_id=session_id, **env_dict).model_dump()
+            await set_cache(cache_key, snapshot)
+            return EnvironmentData(**snapshot)
 
-        # 4️⃣ Fallback to external API service
-        try:
-            api_env = fetch_environment_from_api(lat, lon)
-            api_env.session_id = session_id
-            
-            # Store the fetched data
-            self.store_environment(api_env)
-            
-            return api_env
-
-        except Exception:
-            return None
+        return None
 
 
     # ---------- CACHE PLACEHOLDER ----------
