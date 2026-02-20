@@ -4,10 +4,10 @@ from .schemas import ProfileUpdate, TwinUpdate, SettingsUpdate, OnboardingPayloa
 from src.api.deps import get_current_user
 
 from datetime import datetime
-from src.core.aggregate_data import Datastore
+from src.core.aggregate_data import AggregateData
 
 router = APIRouter()
-store = Datastore()
+store = AggregateData()
 
 # ... (keep calculate_persona and calculate_traits helper functions as is) ...
 
