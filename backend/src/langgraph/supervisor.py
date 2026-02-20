@@ -1,89 +1,133 @@
-from typing import List, Dict, Any, Callable
-from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.output_parsers import JsonOutputParser
+from typing import Dict, Any
+from langchain_core.messages import HumanMessage
 from src.langgraph.state import UnifiedState
-from src.llm.gemini import get_gemini_llm
-import json
 from loguru import logger
 
-# Registry to hold available agents and their descriptions
-AGENT_REGISTRY = {
-    "environment_analyst": {
-        "description": "Analyzes weather, climate, and environmental data for a location. Use this for queries about weather, air quality, AQI, pollution, or climate stats.",
-    },
-    "digital_twin": {
-        "description": "Runs simulations and predictions for urban planning and environmental impact. Use this for 'simulate', 'predict', 'what if' scenarios regarding traffic, emissions, or urban changes.",
-    },
-    "micro_learner": {
-        "description": "Provides personalized learning content and tips. Use this when the user asks to learn something, wants a tip, or asks for facts about sustainability.",
-    },
-    "chatbot": {
-        "description": "Handles general conversation, greetings, and queries not covered by other agents. Also use this if the user wants to end the conversation.",
-    }
-}
 
-async def supervisor_agent(state: UnifiedState, datastore: Any) -> Dict[str, Any]:
+async def supervisor_agent(
+    state: UnifiedState,
+    datastore: Any
+) -> Dict[str, Any]:
     """
-    The Supervisor Agent that orchestrates the workflow using LLM.
+    Supervisor Agent
+
+    Responsibilities:
+    1. Inject full deterministic digital twin context before routing.
+    2. Detect hypothetical queries and run counterfactual simulation.
+    3. Route safely to chatbot (or future agents).
     """
-    logger.info("Supervisor: routing user request")
-    messages = state["messages"]
-    last_message = messages[-1]
-    
-    # Validation: If last message is from Assistant (Agent), we probably finish or ask user
-    if not isinstance(last_message, HumanMessage):
-        logger.debug("Supervisor: Last message was not human, finishing turn")
-        return {"next_agent": "FINISH"}
 
-    llm = get_gemini_llm()
-    
-    # Fallback to keyword matching query if LLM is not available
-    if not llm:
-        logger.warning("Supervisor: LLM not available, using fallback")
-        # ... (Fallback logic details omitted for brevity, defaulting to chatbot) ...
-        return {"next_agent": "chatbot"}
-
-    # Construct Agent Descriptions for Prompt
-    agents_desc = "\n".join([f"- {name}: {info['description']}" for name, info in AGENT_REGISTRY.items()])
-    
-    system_prompt = (
-        "You are the Supervisor of an intelligent environmental system.\n"
-        "Your goal is to route the user's request to the most appropriate agent.\n"
-        f"Available Agents:\n{agents_desc}\n\n"
-        "Rules:\n"
-        "1. Return ONLY a JSON object with a single key 'next_agent'.\n"
-        "2. The value must be one of the agent names listed above, or 'FINISH' if the conversation is done.\n"
-        "3. If the user's intent is unclear or general, route to 'chatbot'.\n"
-        "4. Do not add any markdown formatting or explanations."
-    )
-    
     try:
-        logger.info("Supervisor: Invoking LLM for routing")
-        response = await llm.ainvoke([
-            SystemMessage(content=system_prompt),
-            last_message
-        ])
-        
-        content = response.content.strip()
-        # Clean potential markdown code blocks
-        if content.startswith("```json"):
-            content = content[7:-3]
-        elif content.startswith("```"):
-            content = content[3:-3]
-            
-        decision = json.loads(content)
-        next_agent = decision.get("next_agent", "chatbot")
-        
-        # Verify agent exists
-        if next_agent not in AGENT_REGISTRY and next_agent != "FINISH":
-            logger.warning(f"Supervisor: Invalid agent '{next_agent}' selected by LLM. Defaulting to chatbot.")
-            next_agent = "chatbot"
-        else:
-            logger.info(f"Supervisor: Routed to {next_agent}")
-            
-    except Exception as e:
-        logger.error(f"Supervisor Error: {e}")
-        next_agent = "chatbot"
+        user_id = state.get("user_id")
+        lat = state.get("lat")
+        lon = state.get("lon")
 
-    return {"next_agent": next_agent}
+        structured_data = state.get("structured_data") or {}
+
+        # --------------------------------------------------
+        # 1️⃣ Inject Full Digital Twin Context
+        # --------------------------------------------------
+
+        if user_id and lat is not None and lon is not None:
+            try:
+                twin_context = await datastore.build_full_context(
+                    user_id=user_id,
+                    lat=lat,
+                    lon=lon
+                )
+
+                if twin_context:
+                    structured_data.update(twin_context)
+
+            except Exception as e:
+                logger.warning(f"Twin context build failed: {e}")
+
+        # --------------------------------------------------
+        # 2️⃣ Extract Last Message
+        # --------------------------------------------------
+
+        if not state.get("messages"):
+            return {
+                "next_agent": "chatbot",
+                "structured_data": structured_data
+            }
+
+        last_message = state["messages"][-1]
+
+        if not isinstance(last_message, HumanMessage):
+            return {
+                "next_agent": "chatbot",
+                "structured_data": structured_data
+            }
+
+        query = (last_message.content or "").lower()
+
+        # --------------------------------------------------
+        # 3️⃣ Detect Hypothetical / Counterfactual Queries
+        # --------------------------------------------------
+
+        hypothetical_triggers = [
+            "what if",
+            "suppose",
+            "if i",
+            "imagine",
+            "hypothetically"
+        ]
+
+        is_hypothetical = any(trigger in query for trigger in hypothetical_triggers)
+
+        if is_hypothetical:
+            try:
+                environment = structured_data.get("environment", {})
+                behavior_profile = structured_data.get("behavior_profile", {})
+                behavior = behavior_profile.get("behavior_model", {})
+                health = behavior_profile.get("health_profile", {})
+
+                env_override: Dict[str, Any] = {}
+
+                # Example override logic
+                if "double aqi" in query:
+                    current_pm25 = environment.get("pm2_5") or 0
+                    env_override["pm2_5"] = current_pm25 * 2
+
+                if "increase pollution" in query:
+                    current_pm25 = environment.get("pm2_5") or 0
+                    env_override["pm2_5"] = current_pm25 * 1.5
+
+                if "zero pollution" in query:
+                    env_override["pm2_5"] = 0
+
+                # Run deterministic simulation safely
+                if hasattr(datastore, "twin_engine") and datastore.twin_engine:
+                    simulated = datastore.twin_engine.simulate(
+                        environment=environment,
+                        behavior=behavior,
+                        health=health,
+                        env_override=env_override
+                    )
+
+                    structured_data["counterfactual_simulation"] = simulated
+
+            except Exception as e:
+                logger.warning(f"Counterfactual simulation failed: {e}")
+
+        # --------------------------------------------------
+        # 4️⃣ Final Routing
+        # --------------------------------------------------
+
+        # For demo simplicity: always route to chatbot.
+        # Future: you can add intelligent routing logic here.
+
+        return {
+            "next_agent": "chatbot",
+            "structured_data": structured_data
+        }
+
+    except Exception as e:
+        logger.error(f"Supervisor fatal error: {e}")
+
+        return {
+            "next_agent": "chatbot",
+            "structured_data": state.get("structured_data", {}),
+            "error": str(e)
+        }

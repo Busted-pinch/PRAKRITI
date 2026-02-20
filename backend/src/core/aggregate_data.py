@@ -1,203 +1,114 @@
-from typing import Optional
-import requests
+from typing import Dict, Any
+import asyncio
 from src.core.cache import get_cache, set_cache
 from src.core.supabase_client import supabase
-from src.schemas.aggregate import EnvironmentData, SessionData, UserData
+from src.core.open_meteo_client import fetch_weather, fetch_air_quality
+from src.core.waqi_client import fetch_waqi
+from src.core.twin_engine import TwinEngine
 
 
 class AggregateData:
-    """
-    Central datastore for Supabase access, external APIs, and caching.
-    """
 
-    # ---------- USER ----------
-    def get_user(self, user_id: str) -> Optional[UserData]:
-        res = supabase.table("users").select("*").eq("id", user_id).single().execute()
-        if res.data:
-            return UserData(**res.data)
-        return None
+    def __init__(self):
+        self.twin_engine = TwinEngine()
 
-    # ---------- SESSION ----------
-    def get_session(self, session_id: str) -> Optional[SessionData]:
-        res = (
-            supabase.table("user_sessions")
-            .select("*")
-            .eq("session_id", session_id)
-            .single()
-            .execute()
-        )
-        if res.data:
-            return SessionData(**res.data)
-        return None
-    
-    # ---------- WEATHER DATA ----------
-    async def get_weather_data(self, location: str):
-        """
-        Fetch latest weather snapshot from environmental_readings.
-        """
-        res = (
-            supabase
-            .table("environmental_readings")
-            .select("data_type, readings")
-            .eq("is_forecast", False)
-            .order("recorded_at", desc=True)
-            .limit(50)
-            .execute()
-        )
+    # -----------------------------------
+    # BEHAVIOR PROFILE
+    # -----------------------------------
 
-        weather = {}
+    async def get_behavior_profile(self, user_id: str):
 
-        for row in res.data or []:
-            param = row.get("data_type")
-            value = row.get("readings", {}).get("value")
+        cache_key = f"profile:{user_id}"
+        cached = await get_cache(cache_key)
+        if cached:
+            return cached
 
-            if value is None:
-                continue
+        loop = asyncio.get_running_loop()
 
-            if param == "temperature_2m" and "temperature" not in weather:
-                weather["temperature"] = value
-            elif param == "relative_humidity_2m" and "humidity" not in weather:
-                weather["humidity"] = value
-            elif param == "wind_speed_10m" and "wind_speed" not in weather:
-                weather["wind_speed"] = value
-            elif param == "uv_index" and "uv_index" not in weather:
-                weather["uv_index"] = value
-
-        return weather
-    
-    # ---------- CLIMATE INFO ----------
-    async def get_climate_info(self, location: str):
-        """
-        Return simple derived climate stats.
-        """
-        res = (
-            supabase
-            .table("environmental_readings")
-            .select("readings")
-            .eq("data_type", "pm2_5")
-            .eq("is_forecast", False)
-            .limit(100)
-            .execute()
-        )
-
-        values = [
-            float(row["readings"]["value"])
-            for row in res.data or []
-            if row.get("readings", {}).get("value") is not None
-        ]
-
-        avg_pm25 = sum(values) / len(values) if values else None
-
-        return {
-            "average_pm2_5": avg_pm25,
-            "air_quality_level": (
-                "Good" if avg_pm25 and avg_pm25 < 50
-                else "Moderate" if avg_pm25 and avg_pm25 < 100
-                else "Poor"
-            )
-        }
-    # ---------- USER INFO ----------
-    async def get_user_info(self, user_id: str):
-        """
-        Fetch profile preferences for personalization.
-        """
-        res = (
-            supabase
-            .table("profiles")
-            .select("*")
-            .eq("id", user_id)
-            .single()
-            .execute()
-        )
-
-        if not res.data:
-            return {}
-
-        return {
-            "id": res.data["id"],
-            "preferences": res.data.get("preferences", {}),
-            "settings": res.data.get("settings", {})
-        }
-
-    
-    # ---------- USER BEHAVIOR ----------
-    def get_user_behavior(self, user_id: str):
-
-        res = (
-            supabase
-            .table("behavior_profiles")
+        response = await loop.run_in_executor(
+            None,
+            lambda: supabase.table("behavior_profiles")
             .select("*")
             .eq("user_id", user_id)
             .single()
             .execute()
         )
 
-        if not res.data:
-            return None
+        if not response.data:
+            return {}
 
-        from src.services.behavior.models import BehavioralModel
+        data = response.data
 
-        behavior_model = BehavioralModel(**res.data["behavior_model"])
-
-        return {
-            "behavior_model": behavior_model,
-            "mbti": res.data.get("mbti"),
-            "selected_interests": res.data.get("selected_interests"),
-            "hobbies": res.data.get("hobbies"),
-            "diseases": res.data.get("diseases"),
-            "constraints": res.data.get("constraints"),
+        result = {
+            "behavior_model": data.get("behavior_model", {}),
+            "interest_vector": data.get("behavior_model", {}).get("interest_vector", {}),
+            "health_profile": {
+                "health_sensitivity": data.get("behavior_model", {}).get("health_sensitivity", 1.0),
+                "diseases": data.get("diseases", [])
+            }
         }
 
+        await set_cache(cache_key, result, ttl=1800)
 
-    # ---------- UNIFIED SMART FETCH ----------
+        return result
 
-    async def get_or_fetch_environment(
-        self,
-        session_id: str,
-        lat: float,
-        lon: float,
-        forecast: bool = False
-    ) -> Optional[EnvironmentData]:
+    # -----------------------------------
+    # ENVIRONMENT SNAPSHOT
+    # -----------------------------------
 
-        cache_key = f"env:{lat}:{lon}:{forecast}"
+    async def get_environment_snapshot(self, lat: float, lon: float):
 
-        # 1️⃣ Redis first
+        cache_key = f"env:{round(lat,4)}:{round(lon,4)}"
         cached = await get_cache(cache_key)
         if cached:
-            return EnvironmentData(**cached)
+            return cached
 
-        # 2️⃣ Database fallback
-        response = (
-            supabase
-            .table("environmental_readings")
-            .select("data_type, readings")
-            .eq("is_forecast", forecast)
-            .eq("location->>lat", str(lat))
-            .eq("location->>lon", str(lon))
-            .order("recorded_at", desc=True)
-            .limit(100)
-            .execute()
+        weather, air, waqi = await asyncio.gather(
+            fetch_weather(lat, lon),
+            fetch_air_quality(lat, lon),
+            fetch_waqi(lat, lon)
         )
 
-        env_dict = {}
+        snapshot = {
+            "temperature": weather.get("current", {}).get("temperature_2m"),
+            "humidity": weather.get("current", {}).get("relative_humidity_2m"),
+            "wind_speed": weather.get("current", {}).get("wind_speed_10m"),
+            "uv_index": weather.get("current", {}).get("uv_index"),
+            "pm2_5": air.get("hourly", {}).get("pm2_5", [None])[0],
+            "pm10": air.get("hourly", {}).get("pm10", [None])[0],
+            "ozone": air.get("hourly", {}).get("ozone", [None])[0],
+            "nitrogen_dioxide": air.get("hourly", {}).get("nitrogen_dioxide", [None])[0],
+            "aqi": waqi.get("aqi") if waqi else None,
+        }
 
-        for row in response.data or []:
-            param = row.get("data_type")
-            value = row.get("readings", {}).get("value")
-            if value is None:
-                continue
+        await set_cache(cache_key, snapshot, ttl=1800)
 
-            if param not in env_dict:
-                env_dict[param] = value
+        return snapshot
 
-        if env_dict:
-            snapshot = EnvironmentData(session_id=session_id, **env_dict).model_dump()
-            await set_cache(cache_key, snapshot)
-            return EnvironmentData(**snapshot)
+    # -----------------------------------
+    # FULL CONTEXT BUILDER
+    # -----------------------------------
 
-        return None
+    async def build_full_context(self, user_id: str, lat: float, lon: float):
 
+        environment = await self.get_environment_snapshot(lat, lon)
+        behavior = await self.get_behavior_profile(user_id)
 
-    # ---------- CACHE PLACEHOLDER ----------
-    def get_cached_environment(self, session_id: str):
-        return None
+        twin_state = self.twin_engine.build_twin_state(
+            user_id=user_id,
+            environment=environment,
+            behavior_profile=behavior
+        )
+
+        await set_cache(f"twin:{user_id}", twin_state, ttl=900)
+
+        return {
+            "environment": environment,
+            "behavior_profile": behavior,
+            "twin_state": twin_state,
+            "llm_context": {
+                "risk_level": twin_state["risk_category"],
+                "risk_score": twin_state["current_risk"],
+                "projection_7d": twin_state["projection_7d"]
+            }
+        }
