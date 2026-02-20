@@ -67,7 +67,7 @@ async def root():
 
 app.include_router(session_router, prefix="/session", tags=["Session"])
 
-app.include_router(behavior_router, prefix="/behavior", tags=["Behavior"])
+
 
 app.include_router(interaction_router, prefix="/interaction", tags=["Interaction"])
 

@@ -3,6 +3,7 @@ import requests
 
 from src.core.supabase_client import supabase
 from src.schemas.aggregate import EnvironmentData, SessionData, UserData
+from src.api.environment.services import fetch_environment_from_api
 
 
 class Datastore:
@@ -15,6 +16,20 @@ class Datastore:
         res = supabase.table("users").select("*").eq("id", user_id).single().execute()
         if res.data:
             return UserData(**res.data)
+        return None
+
+    def create_user(self, user_data: dict) -> Optional[UserData]:
+        """Creates a new user in the database."""
+        res = supabase.table("users").insert(user_data).execute()
+        if res.data:
+            return UserData(**res.data[0])
+        return None
+
+    def update_user(self, user_id: str, updates: dict) -> Optional[UserData]:
+        """Updates an existing user in the database."""
+        res = supabase.table("users").update(updates).eq("id", user_id).execute()
+        if res.data:
+            return UserData(**res.data[0])
         return None
 
     # ---------- SESSION ----------
@@ -134,21 +149,16 @@ class Datastore:
                 session_id=session_id,
                 **env_dict,
             )
-        # 4️⃣ Fallback to direct API (minimal emergency fallback)
+
+        # 4️⃣ Fallback to external API service
         try:
-            weather = requests.get(
-                f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true",
-                timeout=5
-            ).json()
-
-            current = weather.get("current_weather", {})
-
-            return EnvironmentData(
-                session_id=session_id,
-                temperature=current.get("temperature"),
-                wind_speed=current.get("windspeed"),
-                is_forecast=False
-            )
+            api_env = fetch_environment_from_api(lat, lon)
+            api_env.session_id = session_id
+            
+            # Store the fetched data
+            self.store_environment(api_env)
+            
+            return api_env
 
         except Exception:
             return None

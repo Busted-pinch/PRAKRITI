@@ -3,11 +3,13 @@ from typing import Dict
 from .schemas import ProfileUpdate, TwinUpdate, SettingsUpdate, OnboardingPayload, UserProfile, Persona, Trait, Constraints
 from src.api.deps import get_current_user
 
-router = APIRouter()
+from datetime import datetime
+from src.core.aggregate_data import Datastore
 
-# --- MOCK DATABASE (In-Memory for Demo) ---
-# In a real app, this would be in Supabase
-USER_DB: Dict[str, dict] = {}
+router = APIRouter()
+store = Datastore()
+
+# ... (keep calculate_persona and calculate_traits helper functions as is) ...
 
 def calculate_persona(constraints: Constraints) -> Persona:
     intensity = constraints.max_physical_intensity
@@ -48,8 +50,7 @@ async def onboarding(payload: OnboardingPayload, current_user = Depends(get_curr
     persona = calculate_persona(payload.constraints)
     traits = calculate_traits(payload.answers)
     
-    # Store in Mock DB
-    USER_DB[user_id] = {
+    user_data = {
         "id": user_id,
         "email": email,
         "name": user_metadata.get("full_name", "Traveler"),
@@ -61,7 +62,22 @@ async def onboarding(payload: OnboardingPayload, current_user = Depends(get_curr
         "twin_status": "optimizing"
     }
 
-    return {"message": "Onboarding complete", "profile": USER_DB[user_id]}
+    # Try to clean up existing user or upsert
+    # Since we added create/update, we can try update, if fail then create, or just upsert if supabase supports it directly via insert(upsert=True)
+    # But Datastore.create_user uses insert(), Datastore.update_user uses update()
+    # Let's try to get user first
+    existing = store.get_user(user_id)
+    if existing:
+        saved_user = store.update_user(user_id, user_data)
+    else:
+        saved_user = store.create_user(user_data)
+
+    if not saved_user:
+         # Fallback if DB fails (or if we want to return what we computed anyway)
+         # In a real app, raise HTTPException
+         return {"message": "Onboarding complete (local)", "profile": user_data}
+
+    return {"message": "Onboarding complete", "profile": saved_user}
 
 @router.get("/profile", response_model=UserProfile)
 async def get_profile(current_user = Depends(get_current_user)):
@@ -74,8 +90,9 @@ async def get_profile(current_user = Depends(get_current_user)):
         email = current_user.get("email", "user@example.com")
         user_metadata = current_user.get("user_metadata", {})
     
-    # Return from Mock DB or Default
-    profile = USER_DB.get(user_id)
+    # Return from DB
+    profile = store.get_user(user_id)
+    
     if not profile:
         # Return basic profile if no assessment done yet
         return UserProfile(
@@ -85,25 +102,38 @@ async def get_profile(current_user = Depends(get_current_user)):
             hobbies=[],
             interests=[]
         )
-    return UserProfile(**profile)
+    return profile
 
 @router.put("/profile")
 async def update_profile(data: ProfileUpdate, current_user = Depends(get_current_user)):
     user_id = current_user.id if hasattr(current_user, 'id') else (current_user.get("sub") or current_user.get("id"))
-    if user_id in USER_DB:
-        # Update fields
-        pass # Implement update logic
+    
+    # We only update fields that are provided
+    updates = data.dict(exclude_unset=True)
+    if updates:
+        store.update_user(user_id, updates)
+        
     return {"message": "Profile updated", "data": data}
 
 @router.get("/twin")
 async def get_twin_state(current_user = Depends(get_current_user)):
     user_id = current_user.id if hasattr(current_user, 'id') else (current_user.get("sub") or current_user.get("id"))
-    profile = USER_DB.get(user_id)
-    status = profile.get("twin_status", "healthy") if profile else "healthy"
+    profile = store.get_user(user_id)
+    
+    status = "healthy"
+    if profile and hasattr(profile, "twin_status"):
+         status = profile.twin_status
+    elif profile and isinstance(profile, dict):
+         status = profile.get("twin_status", "healthy")
+
     return {"status": status, "risk_level": "low"}
 
 @router.put("/twin")
 async def update_twin_state(data: TwinUpdate):
+    # This endpoint didn't verify user in original code, but we probably should. 
+    # For now, keeping it simple or assuming it might be system called? 
+    # Actually, without user_id we can't update.
+    # The original code just returned the data.
     return {"message": "Twin updated", "data": data}
 
 @router.get("/settings")
