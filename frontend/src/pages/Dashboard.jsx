@@ -67,7 +67,7 @@ const Dashboard = () => {
                     envData = envRes.value.data;
                 }
 
-                if (!profileData?.persona) {
+                if (!profileData) {
                     navigate('/assessment');
                     return;
                 }

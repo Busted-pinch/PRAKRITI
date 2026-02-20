@@ -1,6 +1,9 @@
+import asyncio
 from fastapi import APIRouter, Depends
 from src.api.deps import get_current_user
 from src.core.aggregate_data import AggregateData
+from src.core.open_meteo_client import fetch_weather, fetch_air_quality
+from src.api.environment.utils import parse_hourly
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
 
@@ -13,17 +16,14 @@ datastore = AggregateData()
 @router.get("/current")
 async def get_current_environment(lat: float, lon: float):
 
-    env_data = await datastore.get_or_fetch_environment(
-        session_id="rest_api",
-        lat=lat,
-        lon=lon,
-        forecast=False
-    )
+    env_data = await datastore.get_environment_snapshot(lat, lon)
 
     if not env_data:
         return {"error": "Unable to fetch environment data"}
 
-    return env_data.model_dump()
+    # Include session_id to satisfy Pydantic models or frontend expectations if necessary
+    env_data["session_id"] = "rest_api"
+    return env_data
 
 
 # ---------------------------------------
@@ -33,19 +33,30 @@ async def get_current_environment(lat: float, lon: float):
 @router.get("/hourly")
 async def get_hourly_forecast(lat: float, lon: float):
 
-    env_data = await datastore.get_or_fetch_environment(
-        session_id="rest_api",
-        lat=lat,
-        lon=lon,
-        forecast=True
+    weather, air = await asyncio.gather(
+        fetch_weather(lat, lon),
+        fetch_air_quality(lat, lon)
     )
 
-    if not env_data:
+    if not weather or not air:
         return {"error": "Unable to fetch forecast"}
 
+    forecast_trajectory = []
+    if "hourly" in air and "pm2_5" in air["hourly"]:
+        pm25_list = air["hourly"].get("pm2_5", [])[:24]
+        temp_list = weather.get("hourly", {}).get("temperature_2m", [])[:24]
+        time_list = weather.get("hourly", {}).get("time", [])[:24]
+        
+        for t, pm, temp in zip(time_list, pm25_list, temp_list):
+            forecast_trajectory.append({
+                "time": t,
+                "pm2_5": pm,
+                "temperature": temp
+            })
+
     return {
-        "forecast_daily_avg": env_data.forecast_daily_avg,
-        "forecast_trajectory": env_data.forecast_trajectory
+        "forecast_daily_avg": {},
+        "forecast_trajectory": forecast_trajectory
     }
 
 

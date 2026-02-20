@@ -50,34 +50,43 @@ async def onboarding(payload: OnboardingPayload, current_user = Depends(get_curr
     persona = calculate_persona(payload.constraints)
     traits = calculate_traits(payload.answers)
     
-    user_data = {
-        "id": user_id,
-        "email": email,
-        "name": user_metadata.get("full_name", "Traveler"),
-        "persona": persona.dict(),
-        "traits": [t.dict() for t in traits],
-        "hobbies": payload.hobbies,
-        "interests": payload.selected_interests,
-        "constraints": payload.constraints.dict(),
-        "twin_status": "optimizing"
-    }
-
-    # Try to clean up existing user or upsert
-    # Since we added create/update, we can try update, if fail then create, or just upsert if supabase supports it directly via insert(upsert=True)
-    # But Datastore.create_user uses insert(), Datastore.update_user uses update()
-    # Let's try to get user first
-    existing = store.get_user(user_id)
-    if existing:
-        saved_user = store.update_user(user_id, user_data)
+    # Profile updates (name only usually)
+    existing_profile = store.get_user(user_id)
+    profile_updates = {"name": user_metadata.get("full_name", "Traveler")}
+    if existing_profile:
+        store.update_user(user_id, profile_updates)
     else:
-        saved_user = store.create_user(user_data)
+        store.create_user({"id": user_id, **profile_updates})
 
-    if not saved_user:
-         # Fallback if DB fails (or if we want to return what we computed anyway)
-         # In a real app, raise HTTPException
-         return {"message": "Onboarding complete (local)", "profile": user_data}
+    # Behavior profile
+    behavior_data = {
+        "behavior_model": {
+            "persona": persona.dict(),
+            "traits": [t.dict() for t in traits],
+            "twin_status": "optimizing"
+        },
+        "mbti": persona.name, # Using persona name as placeholder for MBTI
+        "selected_interests": payload.selected_interests,
+        "hobbies": payload.hobbies,
+        "diseases": payload.diseases,
+        "constraints": payload.constraints.dict(),
+    }
+    
+    saved_behavior = store.upsert_behavior_profile(user_id, behavior_data)
 
-    return {"message": "Onboarding complete", "profile": saved_user}
+    user_profile = UserProfile(
+        id=user_id,
+        email=email,
+        name=profile_updates["name"],
+        persona=persona,
+        traits=traits,
+        hobbies=payload.hobbies,
+        interests=payload.selected_interests,
+        constraints=payload.constraints,
+        twin_status="optimizing"
+    )
+
+    return {"message": "Onboarding complete", "profile": user_profile.dict()}
 
 @router.get("/profile", response_model=UserProfile)
 async def get_profile(current_user = Depends(get_current_user)):
@@ -92,17 +101,43 @@ async def get_profile(current_user = Depends(get_current_user)):
     
     # Return from DB
     profile = store.get_user(user_id)
+    behavior = store.get_raw_behavior_profile(user_id)
     
-    if not profile:
-        # Return basic profile if no assessment done yet
-        return UserProfile(
-            id=user_id,
-            email=email,
-            name=user_metadata.get("full_name", "Traveler"),
-            hobbies=[],
-            interests=[]
-        )
-    return profile
+    name = user_metadata.get("full_name", "Traveler")
+    
+    if profile and hasattr(profile, 'name') and profile.name:
+        name = profile.name
+        
+    hobbies = []
+    interests = []
+    persona = None
+    traits = None
+    constraints = None
+    twin_status = "healthy"
+    
+    if behavior:
+        hobbies = behavior.get("hobbies", [])
+        interests = behavior.get("selected_interests", [])
+        if behavior.get("constraints"):
+            constraints = Constraints(**behavior["constraints"])
+        behavior_model = behavior.get("behavior_model", {})
+        if behavior_model.get("persona"):
+            persona = Persona(**behavior_model["persona"])
+        if behavior_model.get("traits"):
+            traits = [Trait(**t) for t in behavior_model["traits"]]
+        twin_status = behavior_model.get("twin_status", "healthy")
+        
+    return UserProfile(
+        id=user_id,
+        email=email,
+        name=name,
+        hobbies=hobbies,
+        interests=interests,
+        persona=persona,
+        traits=traits,
+        constraints=constraints,
+        twin_status=twin_status
+    )
 
 @router.put("/profile")
 async def update_profile(data: ProfileUpdate, current_user = Depends(get_current_user)):

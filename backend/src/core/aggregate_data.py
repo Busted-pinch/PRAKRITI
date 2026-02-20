@@ -1,10 +1,12 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import asyncio
 from src.core.cache import get_cache, set_cache
 from src.core.supabase_client import supabase
 from src.schemas.aggregate import EnvironmentData, SessionData, UserData
 from src.api.environment.services import fetch_environment_from_api
-
+from src.core.twin_engine import TwinEngine
+from src.core.open_meteo_client import fetch_weather, fetch_air_quality
+from src.core.waqi_client import fetch_waqi
 
 class AggregateData:
     """
@@ -13,21 +15,21 @@ class AggregateData:
 
     # ---------- USER ----------
     def get_user(self, user_id: str) -> Optional[UserData]:
-        res = supabase.table("users").select("*").eq("id", user_id).single().execute()
+        res = supabase.table("profiles").select("*").eq("id", user_id).single().execute()
         if res.data:
             return UserData(**res.data)
         return None
 
     def create_user(self, user_data: dict) -> Optional[UserData]:
         """Creates a new user in the database."""
-        res = supabase.table("users").insert(user_data).execute()
+        res = supabase.table("profiles").insert(user_data).execute()
         if res.data:
             return UserData(**res.data[0])
         return None
 
     def update_user(self, user_id: str, updates: dict) -> Optional[UserData]:
         """Updates an existing user in the database."""
-        res = supabase.table("users").update(updates).eq("id", user_id).execute()
+        res = supabase.table("profiles").update(updates).eq("id", user_id).execute()
         if res.data:
             return UserData(**res.data[0])
         return None
@@ -137,6 +139,16 @@ class AggregateData:
         await set_cache(cache_key, result, ttl=1800)
 
         return result
+
+    def get_raw_behavior_profile(self, user_id: str):
+        res = supabase.table("behavior_profiles").select("*").eq("user_id", user_id).limit(1).execute()
+        return res.data[0] if res.data else None
+
+    def upsert_behavior_profile(self, user_id: str, data: dict):
+        # We must include user_id in the data for upsert
+        upsert_data = {"user_id": user_id, **data}
+        res = supabase.table("behavior_profiles").upsert(upsert_data, on_conflict="user_id").execute()
+        return res.data[0] if res.data else None
 
     # -----------------------------------
     # ENVIRONMENT SNAPSHOT
