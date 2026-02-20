@@ -109,3 +109,32 @@ async def get_exposure_history(start: str, end: str):
         "cumulative_exposure": cumulative,
         "risk_score": cumulative / 100 if cumulative else 0
     }
+
+# ---------------------------------------
+# COLLECT AND STORE
+# ---------------------------------------
+
+@router.post("/collect")
+async def collect_environment(session_id: str, lat: float, lon: float):
+
+    weather, air = await asyncio.gather(
+        fetch_weather(lat, lon),
+        fetch_air_quality(lat, lon)
+    )
+
+    weather_rows = parse_hourly(weather, lat, lon, "open-meteo-weather", True)
+    air_rows = parse_hourly(air, lat, lon, "open-meteo-air", True)
+
+    all_rows = weather_rows + air_rows
+
+    def chunk(data, size=500):
+        for i in range(0, len(data), size):
+            yield data[i:i + size]
+
+    for batch in chunk(all_rows):
+        supabase.table("environmental_readings").insert(batch).execute()
+
+    return {
+        "status": "stored",
+        "records_inserted": len(all_rows)
+    }

@@ -18,7 +18,6 @@ from src.api.user.behavior.views import router as user_behavior_router
 
 
 
-
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Techathon 3.0 PRAKRITI Backend",

@@ -2,12 +2,98 @@ from typing import Dict, Any
 import asyncio
 from src.core.cache import get_cache, set_cache
 from src.core.supabase_client import supabase
-from src.core.open_meteo_client import fetch_weather, fetch_air_quality
-from src.core.waqi_client import fetch_waqi
-from src.core.twin_engine import TwinEngine
+from src.schemas.aggregate import EnvironmentData, SessionData, UserData
+from src.api.environment.services import fetch_environment_from_api
 
 
 class AggregateData:
+    """
+    Central datastore for Supabase access, external APIs, and caching.
+    """
+
+    # ---------- USER ----------
+    def get_user(self, user_id: str) -> Optional[UserData]:
+        res = supabase.table("users").select("*").eq("id", user_id).single().execute()
+        if res.data:
+            return UserData(**res.data)
+        return None
+
+    def create_user(self, user_data: dict) -> Optional[UserData]:
+        """Creates a new user in the database."""
+        res = supabase.table("users").insert(user_data).execute()
+        if res.data:
+            return UserData(**res.data[0])
+        return None
+
+    def update_user(self, user_id: str, updates: dict) -> Optional[UserData]:
+        """Updates an existing user in the database."""
+        res = supabase.table("users").update(updates).eq("id", user_id).execute()
+        if res.data:
+            return UserData(**res.data[0])
+        return None
+
+    # ---------- SESSION ----------
+    def get_session(self, session_id: str) -> Optional[SessionData]:
+        res = (
+            supabase.table("user_sessions")
+            .select("*")
+            .eq("session_id", session_id)
+            .single()
+            .execute()
+        )
+        if res.data:
+            return SessionData(**res.data)
+        return None
+    
+    # ---------- WEATHER DATA ----------
+    async def get_weather_data(self, location: str):
+        """
+        Fetch latest weather snapshot from environmental_readings.
+        """
+        res = (
+            supabase
+            .table("environmental_readings")
+            .select("data_type, readings")
+            .eq("is_forecast", False)
+            .order("recorded_at", desc=True)
+            .limit(50)
+            .execute()
+        )
+
+        weather = {}
+
+        for row in res.data or []:
+            param = row.get("data_type")
+            value = row.get("readings", {}).get("value")
+
+            if value is None:
+                continue
+
+            if param == "temperature_2m" and "temperature" not in weather:
+                weather["temperature"] = value
+            elif param == "relative_humidity_2m" and "humidity" not in weather:
+                weather["humidity"] = value
+            elif param == "wind_speed_10m" and "wind_speed" not in weather:
+                weather["wind_speed"] = value
+            elif param == "uv_index" and "uv_index" not in weather:
+                weather["uv_index"] = value
+
+        return weather
+    
+    # ---------- CLIMATE INFO ----------
+    async def get_climate_info(self, location: str):
+        """
+        Return simple derived climate stats.
+        """
+        res = (
+            supabase
+            .table("environmental_readings")
+            .select("readings")
+            .eq("data_type", "pm2_5")
+            .eq("is_forecast", False)
+            .limit(100)
+            .execute()
+        )
 
     def __init__(self):
         self.twin_engine = TwinEngine()

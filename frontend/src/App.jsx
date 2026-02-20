@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import AiCompanion from './pages/AiCompanion';
+import Profile from './pages/Profile';
 import './index.css';
 
 
@@ -54,6 +55,14 @@ function App() {
                       element={
                         <ProtectedRoute>
                           <Questionnaire />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/profile"
+                      element={
+                        <ProtectedRoute>
+                          <Profile />
                         </ProtectedRoute>
                       }
                     />
