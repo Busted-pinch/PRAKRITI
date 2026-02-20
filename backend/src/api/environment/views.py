@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends
-from typing import Optional
-from datetime import datetime
 from src.api.deps import get_current_user
 from src.core.supabase_client import supabase
+from src.core.cache import get_cache, set_cache
 from src.api.environment.utils import (
     parse_hourly,
     map_weather_code,
@@ -12,11 +11,8 @@ from src.api.environment.utils import (
 from src.core.waqi_client import fetch_waqi
 from src.core.open_meteo_client import fetch_weather, fetch_air_quality
 import asyncio
-from src.core.aggregate_data import AggregateData
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
-
-store = AggregateData()
 
 # ---------------------------------------
 # CURRENT ENVIRONMENT
@@ -25,6 +21,17 @@ store = AggregateData()
 @router.get("/current")
 async def get_current_environment(lat: float, lon: float):
 
+    # Round to avoid float precision cache fragmentation
+    lat_r = round(lat, 4)
+    lon_r = round(lon, 4)
+    cache_key = f"current:{lat_r}:{lon_r}"
+
+    # 🔹 Try Redis
+    cached = await get_cache(cache_key)
+    if cached:
+        return cached
+
+    # 🔹 Fetch external APIs in parallel
     weather, air, waqi_data = await asyncio.gather(
         fetch_weather(lat, lon),
         fetch_air_quality(lat, lon),
@@ -51,6 +58,7 @@ async def get_current_environment(lat: float, lon: float):
     aqi_category = map_aqi_category(aqi_value)
     waqi_record = build_waqi_record(lat, lon, waqi_data)
 
+    # 🔹 Store WAQI snapshot in DB
     if waqi_record:
         supabase.table("environmental_readings") \
             .upsert(
@@ -59,21 +67,18 @@ async def get_current_environment(lat: float, lon: float):
             ) \
             .execute()
 
-    return {
+    response_data = {
         "temperature": current_weather.get("temperature_2m"),
         "apparent_temperature": current_weather.get("apparent_temperature"),
         "humidity": current_weather.get("relative_humidity_2m"),
         "wind_speed": current_weather.get("wind_speed_10m"),
         "uv_index": current_weather.get("uv_index"),
-
         "weather_code": weather_code,
         "weather_condition": weather_condition,
-
         "pm2_5": hourly_air.get("pm2_5", [None])[0],
         "pm10": hourly_air.get("pm10", [None])[0],
         "ozone": hourly_air.get("ozone", [None])[0],
         "nitrogen_dioxide": hourly_air.get("nitrogen_dioxide", [None])[0],
-
         "aqi": aqi_value,
         "aqi_category": aqi_category,
         "dominant_pollutant": dominant,
@@ -81,12 +86,27 @@ async def get_current_environment(lat: float, lon: float):
         "aqi_timestamp": aqi_time,
     }
 
+    # 🔹 Only cache valid data
+    if response_data["temperature"] is not None:
+        await set_cache(cache_key, response_data, ttl=1800)
+
+    return response_data
+
+
 # ---------------------------------------
 # HOURLY FORECAST
 # ---------------------------------------
 
 @router.get("/hourly")
 async def get_hourly_forecast(lat: float, lon: float):
+
+    lat_r = round(lat, 4)
+    lon_r = round(lon, 4)
+    cache_key = f"hourly:{lat_r}:{lon_r}"
+
+    cached = await get_cache(cache_key)
+    if cached:
+        return cached
 
     weather = await fetch_weather(lat, lon)
     hourly = weather.get("hourly", {})
@@ -104,10 +124,14 @@ async def get_hourly_forecast(lat: float, lon: float):
             "uv_index": hourly.get("uv_index", [None])[i] if i < len(hourly.get("uv_index", [])) else None,
         })
 
+    # Cache 15 min (forecast doesn't change fast)
+    await set_cache(cache_key, result, ttl=900)
+
     return result
 
+
 # ---------------------------------------
-# TREND FROM DATABASE (JSON FIXED)
+# TREND
 # ---------------------------------------
 
 @router.get("/trend")
@@ -121,7 +145,7 @@ async def get_environment_trend(days: int = 7):
 
     values = []
 
-    for row in response.data:
+    for row in response.data or []:
         val = row["readings"].get("value")
         if val is not None:
             values.append(float(val))
@@ -133,8 +157,9 @@ async def get_environment_trend(days: int = 7):
         "trend": "improving" if avg < 50 else "worsening"
     }
 
+
 # ---------------------------------------
-# EXPOSURE (JSON FIXED)
+# EXPOSURE
 # ---------------------------------------
 
 @router.get("/exposure")
@@ -150,7 +175,7 @@ async def get_exposure_history(start: str, end: str):
 
     values = []
 
-    for row in response.data:
+    for row in response.data or []:
         val = row["readings"].get("value")
         if val is not None:
             values.append(float(val))
@@ -161,6 +186,7 @@ async def get_exposure_history(start: str, end: str):
         "cumulative_exposure": cumulative,
         "risk_score": cumulative / 100 if cumulative else 0
     }
+
 
 # ---------------------------------------
 # COLLECT AND STORE
@@ -179,7 +205,6 @@ async def collect_environment(session_id: str, lat: float, lon: float):
 
     all_rows = weather_rows + air_rows
 
-    # Chunk insert to avoid Supabase overload
     def chunk(data, size=500):
         for i in range(0, len(data), size):
             yield data[i:i + size]
