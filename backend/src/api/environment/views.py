@@ -4,6 +4,7 @@ from src.api.deps import get_current_user
 from src.core.aggregate_data import AggregateData
 from src.core.open_meteo_client import fetch_weather, fetch_air_quality
 from src.api.environment.utils import parse_hourly
+from src.core.logger import logger
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
 
@@ -15,6 +16,7 @@ datastore = AggregateData()
 
 @router.get("/current")
 async def get_current_environment(lat: float, lon: float):
+    logger.debug(f"[Environment API - Current] Fetching environment for lat={lat}, lon={lon}")
 
     env_data = await datastore.get_environment_snapshot(lat, lon)
 
@@ -23,6 +25,7 @@ async def get_current_environment(lat: float, lon: float):
 
     # Include session_id to satisfy Pydantic models or frontend expectations if necessary
     env_data["session_id"] = "rest_api"
+    logger.debug(f"[Environment API - Current] Returning snapshot data: {env_data}")
     return env_data
 
 
@@ -32,6 +35,7 @@ async def get_current_environment(lat: float, lon: float):
 
 @router.get("/hourly")
 async def get_hourly_forecast(lat: float, lon: float):
+    logger.debug(f"[Environment API - Hourly] Fetching forecast for lat={lat}, lon={lon}")
 
     weather, air = await asyncio.gather(
         fetch_weather(lat, lon),
@@ -54,10 +58,12 @@ async def get_hourly_forecast(lat: float, lon: float):
                 "temperature": temp
             })
 
-    return {
+    res = {
         "forecast_daily_avg": {},
         "forecast_trajectory": forecast_trajectory
     }
+    logger.debug(f"[Environment API - Hourly] Returning forecast with {len(forecast_trajectory)} hours of data")
+    return res
 
 
 # ---------------------------------------
@@ -66,6 +72,7 @@ async def get_hourly_forecast(lat: float, lon: float):
 
 @router.get("/trend")
 async def get_environment_trend(days: int = 7):
+    logger.debug(f"[Environment API - Trend] Fetching environment trend for past {days} days")
 
     from src.core.supabase_client import supabase
 
@@ -116,10 +123,12 @@ async def get_exposure_history(start: str, end: str):
 
     cumulative = sum(values)
 
-    return {
+    res = {
         "cumulative_exposure": cumulative,
         "risk_score": cumulative / 100 if cumulative else 0
     }
+    logger.debug(f"[Environment API - Exposure] Returning exposure: {res}")
+    return res
 
 # ---------------------------------------
 # COLLECT AND STORE
@@ -145,7 +154,9 @@ async def collect_environment(session_id: str, lat: float, lon: float):
     for batch in chunk(all_rows):
         supabase.table("environmental_readings").insert(batch).execute()
 
-    return {
+    res = {
         "status": "stored",
         "records_inserted": len(all_rows)
     }
+    logger.debug(f"[Environment API - Collect] Storage completed: {res}")
+    return res
