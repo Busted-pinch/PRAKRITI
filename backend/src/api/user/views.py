@@ -62,13 +62,15 @@ def calculate_traits(answers: list[int]) -> list[Trait]:
 
 @router.post("/onboarding")
 async def onboarding(payload: OnboardingPayload, current_user = Depends(get_current_user)):
-    # Handle both object and dict (just in case dependency changes)
+    user_id = "00000000-0000-0000-0000-000000000000"
+    email = "user@example.com"
+    user_metadata = {}
     if hasattr(current_user, 'id'):
         user_id = current_user.id
         email = current_user.email
         user_metadata = current_user.user_metadata or {}
-    else:
-        user_id = current_user.get("sub") or current_user.get("id") or "123"
+    elif isinstance(current_user, dict):
+        user_id = current_user.get("sub") or current_user.get("id") or "00000000-0000-0000-0000-000000000000"
         email = current_user.get("email", "user@example.com")
         user_metadata = current_user.get("user_metadata", {})
     
@@ -120,12 +122,15 @@ async def onboarding(payload: OnboardingPayload, current_user = Depends(get_curr
 
 @router.get("/profile", response_model=UserProfile)
 async def get_profile(current_user = Depends(get_current_user)):
+    user_id = "00000000-0000-0000-0000-000000000000"
+    email = "user@example.com"
+    user_metadata = {}
     if hasattr(current_user, 'id'):
         user_id = current_user.id
         email = current_user.email
         user_metadata = current_user.user_metadata or {}
-    else:
-        user_id = current_user.get("sub") or current_user.get("id") or "123"
+    elif isinstance(current_user, dict):
+        user_id = current_user.get("sub") or current_user.get("id") or "00000000-0000-0000-0000-000000000000"
         email = current_user.get("email", "user@example.com")
         user_metadata = current_user.get("user_metadata", {})
     
@@ -172,28 +177,55 @@ async def get_profile(current_user = Depends(get_current_user)):
 
 @router.put("/profile")
 async def update_profile(data: ProfileUpdate, current_user = Depends(get_current_user)):
-    user_id = current_user.id if hasattr(current_user, 'id') else (current_user.get("sub") or current_user.get("id"))
-    if user_id in USER_DB:
-        profile = USER_DB[user_id]
-        if data.name is not None:
-            profile["name"] = data.name
-        if data.hobbies is not None:
-            profile["hobbies"] = data.hobbies
-        if data.interests is not None:
-            profile["interests"] = data.interests
-        if data.diseases is not None:
-            profile["diseases"] = data.diseases
-        if data.constraints is not None:
-            profile["constraints"] = data.constraints.dict()
-            # Recalculate persona when constraints change
-            profile["persona"] = calculate_persona(data.constraints).dict()
-        return {"message": "Profile updated", "profile": profile}
-    
-    raise HTTPException(status_code=404, detail="Profile not found")
+    user_id = "00000000-0000-0000-0000-000000000000"
+    if hasattr(current_user, 'id'):
+        user_id = current_user.id
+    elif isinstance(current_user, dict):
+        user_id = current_user.get("sub") or current_user.get("id") or "00000000-0000-0000-0000-000000000000"
+
+    updates = data.dict(exclude_unset=True)
+    if not updates:
+        return {"message": "No updates provided", "data": data}
+
+    profile_updates = {}
+    if "name" in updates:
+        profile_updates["full_name"] = updates["name"]
+
+    if profile_updates:
+        store.update_user(user_id, profile_updates)
+        
+    behavior_keys = ["hobbies", "interests", "sensitivity", "risk_tolerance"]
+    if any(k in updates for k in behavior_keys):
+        existing_behavior = store.get_raw_behavior_profile(user_id) or {}
+        
+        if "hobbies" in updates:
+            existing_behavior["hobbies"] = updates["hobbies"]
+        if "interests" in updates:
+            existing_behavior["selected_interests"] = updates["interests"]
+            
+        if "sensitivity" in updates:
+            constraints = existing_behavior.get("constraints", {})
+            constraints["aqi_sensitivity"] = updates["sensitivity"]
+            existing_behavior["constraints"] = constraints
+            
+        if "risk_tolerance" in updates:
+            behavior_model = existing_behavior.get("behavior_model", {})
+            behavior_model["risk_tolerance"] = updates["risk_tolerance"]
+            existing_behavior["behavior_model"] = behavior_model
+            
+        store.upsert_behavior_profile(user_id, existing_behavior)
+
+    logger.debug(f"[User API - Update Profile] Applied updates for {user_id}: {updates}")
+        
+    return {"message": "Profile updated", "data": data}
 
 @router.get("/twin")
 async def get_twin_state(current_user = Depends(get_current_user)):
-    user_id = current_user.id if hasattr(current_user, 'id') else (current_user.get("sub") or current_user.get("id"))
+    user_id = "00000000-0000-0000-0000-000000000000"
+    if hasattr(current_user, 'id'):
+        user_id = current_user.id
+    elif isinstance(current_user, dict):
+        user_id = current_user.get("sub") or current_user.get("id") or "00000000-0000-0000-0000-000000000000"
     profile = store.get_user(user_id)
     
     status = "healthy"

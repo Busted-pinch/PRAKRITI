@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 from src.api.deps import get_current_user
-from src.api.user.views import USER_DB  # Import mock DB to fetch profile
+from src.core.aggregate_data import AggregateData
 from src.services.news_service import news_service
 from src.langgraph.agents.news_agent import process_news_for_user
 
@@ -25,15 +25,17 @@ async def get_personalized_news(current_user: dict = Depends(get_current_user)):
     user_id = current_user.get("sub") or current_user.get("id") if isinstance(current_user, dict) else current_user.id
     
     # 1. Get user profile
-    profile = USER_DB.get(user_id)
-    if not profile:
-        profile = {
-            "id": user_id,
-            "persona": {"name": "Traveler"},
-            "constraints": {"max_physical_intensity": "med", "aqi_sensitivity": "med"},
-            "diseases": [],
-            "hobbies": []
-        }
+    store = AggregateData()
+    profile = store.get_user(user_id)
+    behavior = store.get_raw_behavior_profile(user_id) or {}
+
+    profile_data = {
+        "id": user_id,
+        "persona": behavior.get("behavior_model", {}).get("persona", {"name": "Traveler"}),
+        "constraints": behavior.get("constraints", {"max_physical_intensity": "med", "aqi_sensitivity": "med"}),
+        "diseases": behavior.get("diseases", []),
+        "hobbies": behavior.get("hobbies", [])
+    }
 
     # 2. Mock environment context (in production fetch this dynamically)
     # Using the prompt structure from the user
@@ -51,7 +53,7 @@ async def get_personalized_news(current_user: dict = Depends(get_current_user)):
 
     # 4. RAG / Process via LLM
     structured_news = process_news_for_user(
-        user_profile=profile,
+        user_profile=profile_data,
         environment_context=environment_context,
         raw_news=raw_news
     )

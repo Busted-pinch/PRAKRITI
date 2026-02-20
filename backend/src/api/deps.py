@@ -18,7 +18,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     """
     if not credentials:
         from types import SimpleNamespace
-        return SimpleNamespace(id="123", email="demo@example.com", user_metadata={"full_name": "Demo Traveler"})
+        return SimpleNamespace(id="00000000-0000-0000-0000-000000000000", email="demo@example.com", user_metadata={"full_name": "Demo Traveler"})
         
     token = credentials.credentials
     supabase = get_supabase_client()
@@ -28,10 +28,10 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         if not user or not user.user:
              # Fallback to dummy user for local hackathon development if Supabase token is invalid
              from types import SimpleNamespace
-             return SimpleNamespace(id="123", email="demo@example.com", user_metadata={"full_name": "Demo Traveler"})
+             return SimpleNamespace(id="00000000-0000-0000-0000-000000000000", email="demo@example.com", user_metadata={"full_name": "Demo Traveler"})
         return user.user
     except Exception as e:
         # Fallback to dummy user for local hackathon development
         from types import SimpleNamespace
-        return SimpleNamespace(id="123", email="demo@example.com", user_metadata={"full_name": "Demo Traveler"})
+        return SimpleNamespace(id="00000000-0000-0000-0000-000000000000", email="demo@example.com", user_metadata={"full_name": "Demo Traveler"})
 

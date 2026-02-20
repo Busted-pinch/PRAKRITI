@@ -15,8 +15,8 @@ class AggregateData:
 
     # ---------- USER ----------
     def get_user(self, user_id: str) -> Optional[UserData]:
-        res = supabase.table("profiles").select("*").eq("id", user_id).single().execute()
-        if res.data:
+        res = supabase.table("profiles").select("*").eq("id", user_id).maybe_single().execute()
+        if res and res.data:
             return UserData(**res.data)
         return None
 
@@ -40,10 +40,10 @@ class AggregateData:
             supabase.table("user_sessions")
             .select("*")
             .eq("session_id", session_id)
-            .single()
+            .maybe_single()
             .execute()
         )
-        if res.data:
+        if res and res.data:
             return SessionData(**res.data)
         return None
     
@@ -118,11 +118,11 @@ class AggregateData:
             lambda: supabase.table("behavior_profiles")
             .select("*")
             .eq("user_id", user_id)
-            .single()
+            .maybe_single()
             .execute()
         )
 
-        if not response.data:
+        if not response or not response.data:
             return {}
 
         data = response.data
