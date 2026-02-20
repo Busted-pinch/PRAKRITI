@@ -4,11 +4,11 @@ from src.api.deps import get_current_user
 from src.core.aggregate_data import AggregateData
 from src.core.open_meteo_client import fetch_weather, fetch_air_quality
 from src.api.environment.utils import parse_hourly
-from src.core.logger import logger
+from src.core.aggregate_data import Datastore
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
 
-datastore = AggregateData()
+store = Datastore()
 
 # ---------------------------------------
 # CURRENT ENVIRONMENT (Unified)

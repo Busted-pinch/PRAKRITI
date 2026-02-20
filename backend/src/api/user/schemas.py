@@ -20,6 +20,8 @@ class ProfileUpdate(BaseModel):
     risk_tolerance: Optional[float] = None
     hobbies: Optional[List[str]] = None
     interests: Optional[List[str]] = None
+    diseases: Optional[List[str]] = None
+    constraints: Optional[Constraints] = None
 
 class TwinUpdate(BaseModel):
     health_status: str
@@ -44,5 +46,6 @@ class UserProfile(BaseModel):
     traits: Optional[List[Trait]] = None
     hobbies: List[str] = []
     interests: List[str] = []
+    diseases: List[str] = []
     constraints: Optional[Constraints] = None
     twin_status: str = "healthy"

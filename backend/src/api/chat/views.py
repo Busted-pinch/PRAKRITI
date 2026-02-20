@@ -44,12 +44,45 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 # ---------------------------
-# HTTP Endpoints (MOCKED)
+# HTTP Endpoints
 # ---------------------------
 
 @router.get("/history")
 async def get_chat_history():
     return [{"role": "system", "content": "History not available in mock mode."}]
+
+
+@router.post("/message")
+async def send_message(body: ChatMessage, user=Depends(get_current_user)):
+    """
+    HTTP endpoint for sending a single chat message.
+    Runs the message through the LangGraph agent pipeline and returns the final reply.
+    """
+    user_id = user.id
+    content = body.message
+
+    initial_state = {
+        "messages": [HumanMessage(content=content)],
+        "user_id": user_id,
+        "structured_data": {}
+    }
+
+    config = {"configurable": {"thread_id": str(user_id)}}
+
+    # Collect the final response from the graph
+    final_reply = ""
+    try:
+        async for event in app.astream(initial_state, config=config):
+            for node_name, state_update in event.items():
+                if "messages" in state_update and state_update["messages"]:
+                    last_msg = state_update["messages"][-1]
+                    final_reply = last_msg.content if hasattr(last_msg, "content") else str(last_msg)
+    except Exception as e:
+        logger.error(f"Chat message error: {e}")
+        return {"reply": "Sorry, I encountered an error processing your request. Please try again."}
+
+    return {"reply": final_reply or "I don't have a response for that right now."}
+
 
 @router.websocket("/stream")
 async def websocket_endpoint(websocket: WebSocket, token: str = None):
@@ -124,10 +157,6 @@ async def websocket_endpoint(websocket: WebSocket, token: str = None):
         manager.disconnect(user_id, websocket)
     except Exception as e:
         logger.error(f"WebSocket Error: {e}")
-        manager.disconnect(user_id, websocket)
-        print(f"Client {user_id} disconnected")
-    except Exception as e:
-        print(f"WebSocket Error: {e}")
         try:
             await manager.send_json({"type": "error", "content": str(e)}, user_id)
         except:
