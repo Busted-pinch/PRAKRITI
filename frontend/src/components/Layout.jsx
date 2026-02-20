@@ -31,7 +31,7 @@ const Layout = ({ children }) => {
                 transition={{ duration: 0.5 }}
                 className="relative z-10 flex flex-col flex-grow"
             >
-                <div className="flex-grow flex flex-col p-4 sm:p-6 md:p-8 lg:p-12 pt-32">
+                <div className="flex-grow flex flex-col min-h-0 px-4 sm:px-6 md:px-8 lg:px-12 pt-32 pb-4">
                     {children}
                 </div>
             </motion.div>

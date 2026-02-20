@@ -37,19 +37,10 @@ const LandingPage = () => {
             ? 'bg-[#0c0a09]'
             : (environmentalMode ? 'bg-transparent' : 'bg-[#e7e5e4]')
             }`}>
-
-            {/* Background */}
-            <div className={`absolute inset-0 z-0 transition-opacity duration-1000 ${isDarkMode ? 'opacity-80' : 'opacity-60'}`}>
+            {/* Background - matching About/Contact page structure */}
+            <div className="fixed inset-0 z-0 pointer-events-none">
                 <Background3D />
             </div>
-
-            {/* Gradient Overlay for Text Readability - Hide in Env Mode */}
-            <div className={`absolute inset-0 z-0 pointer-events-none bg-gradient-to-b ${isDarkMode
-                ? 'from-black/10 via-transparent to-black/80'
-                : (environmentalMode
-                    ? 'from-transparent via-transparent to-transparent'
-                    : 'from-white/10 via-transparent to-white/80')
-                }`} />
 
             {/* 🔥 HERO SECTION */}
             <div className="relative z-10 pt-40 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto flex flex-col items-center justify-center text-center min-h-[90vh]">
@@ -78,14 +69,17 @@ const LandingPage = () => {
                         className={`text-6xl md:text-8xl lg:text-9xl font-semibold tracking-tighter mb-8 leading-[0.95] ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
                     >
                         Reconnect With the <br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400">
+                        <span className={`text-transparent bg-clip-text bg-gradient-to-r ${isDarkMode
+                            ? 'from-emerald-400 via-teal-400 to-cyan-400'
+                            : 'from-emerald-700 via-teal-600 to-cyan-700'
+                            }`}>
                             Environment
                         </span> Around You.
                     </motion.h1>
 
                     <motion.p
                         variants={itemVariants}
-                        className={`text-xl md:text-2xl max-w-3xl mx-auto mb-12 leading-relaxed font-light ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}
+                        className={`text-xl md:text-2xl max-w-3xl mx-auto mb-12 leading-relaxed font-light ${isDarkMode ? 'text-gray-400' : 'text-gray-700'}`}
                     >
                         In a world of screens and data, we help you understand how the environment truly affects your life — and what you can do about it.
                     </motion.p>
@@ -122,7 +116,7 @@ const LandingPage = () => {
             </div>
 
             {/* 🧠 SECTION 1 — The Problem (Emotional Hook) */}
-            <div className={`relative z-10 py-32 ${isDarkMode ? 'bg-black/20' : 'bg-white/40'} backdrop-blur-sm`}>
+            <div className={`relative z-10 py-32 ${isDarkMode ? 'bg-black/20' : 'bg-white/60'} backdrop-blur-sm`}>
                 <div className="max-w-4xl mx-auto px-6 text-center">
                     <motion.div
                         initial={{ opacity: 0, y: 40 }}
@@ -139,7 +133,7 @@ const LandingPage = () => {
                             <p>
                                 We live in an age of constant notifications, dashboards, and statistics.
                                 <br />
-                                <span className="font-bold text-emerald-500">Air Quality Index. Temperature. Pollution alerts.</span>
+                                <span className={`font-bold ${isDarkMode ? 'text-emerald-500' : 'text-teal-700'}`}>Air Quality Index. Temperature. Pollution alerts.</span>
                             </p>
                             <p className="text-2xl font-serif italic opacity-80">
                                 "But numbers alone don’t change behavior."
@@ -148,7 +142,7 @@ const LandingPage = () => {
                                 We rarely understand how these invisible forces affect our breathing, our mood, our energy, and our long-term health.
                                 And slowly, without realizing it, we lose our connection with the physical world around us.
                             </p>
-                            <p className="uppercase tracking-widest font-bold text-emerald-500 pt-4">
+                            <p className={`uppercase tracking-widest font-bold pt-4 ${isDarkMode ? 'text-emerald-500' : 'text-teal-700'}`}>
                                 Prakriti exists to restore that connection.
                             </p>
                         </div>
@@ -199,7 +193,7 @@ const LandingPage = () => {
             </div>
 
             {/* 🌿 SECTION 3 — Core Features */}
-            <div className={`relative z-10 py-32 ${isDarkMode ? 'bg-gradient-to-b from-transparent to-black/40' : 'bg-gradient-to-b from-transparent to-white/60'}`}>
+            <div className={`relative z-10 py-32 ${isDarkMode ? 'bg-gradient-to-b from-transparent to-black/40' : 'bg-gradient-to-b from-white/40 to-white/70'}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="mb-20">
                         <h2 className={`text-4xl md:text-5xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Core Features</h2>
@@ -253,20 +247,17 @@ const LandingPage = () => {
 };
 
 const WorkStep = ({ step, title, desc, icon, isDarkMode }) => (
-    <motion.div
-        whileHover={{ y: -10 }}
-        className="relative flex flex-col items-center text-center group"
-    >
-        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-bold mb-6 relative z-10 transition-all duration-300 ${isDarkMode
-            ? 'bg-gray-800 text-white border border-gray-700 group-hover:bg-emerald-600 group-hover:border-emerald-500'
-            : 'bg-white text-gray-900 border border-gray-200 group-hover:bg-emerald-500 group-hover:text-white'
+    <GlassCard className="relative p-8 flex flex-col items-center text-center">
+        <div className={`absolute -top-4 -right-2 text-5xl font-black opacity-10 ${isDarkMode ? 'text-white' : 'text-emerald-800'}`}>{step}</div>
+        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-5 transition-all duration-300 ${isDarkMode
+            ? 'bg-emerald-500/20 text-emerald-400'
+            : 'bg-emerald-100 text-emerald-700'
             }`}>
             {icon}
         </div>
-        <h3 className={`text-xl font-bold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{title}</h3>
+        <h3 className={`text-lg font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{title}</h3>
         <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{desc}</p>
-        <div className={`absolute -top-6 right-0 text-6xl font-bold opacity-5 ${isDarkMode ? 'text-white' : 'text-black'}`}>{step}</div>
-    </motion.div>
+    </GlassCard>
 );
 
 const FeatureCard = ({ icon, title, desc, isDarkMode }) => (
