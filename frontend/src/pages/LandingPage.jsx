@@ -1,240 +1,273 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Activity, Shield, Zap, Wind, Brain, Leaf, Layers, CheckCircle } from 'lucide-react';
+import {
+    ArrowRight, Activity, Shield, Zap, Wind,
+    Brain, Leaf, Layers, CheckCircle, Globe,
+    BarChart3, MessageSquare, User, Smartphone
+} from 'lucide-react';
 import Background3D from '../components/Background3D';
 import { useTheme } from '../context/ThemeContext';
+import Footer from '../components/Footer';
+import GlassCard from '../components/GlassCard';
+import { useAuth } from '../context/AuthContext';
+import { useEnvironment } from '../context/EnvironmentContext';
 
 const LandingPage = () => {
     const { isDarkMode } = useTheme();
+    const { environmentalMode, setEnvironmentalMode } = useEnvironment();
+    const { user } = useAuth(); // Check if user is logged in
+
 
     const containerVariants = {
         hidden: { opacity: 0 },
         visible: {
             opacity: 1,
-            transition: { staggerChildren: 0.1 }
+            transition: { staggerChildren: 0.1, delayChildren: 0.3 }
         }
     };
 
     const itemVariants = {
-        hidden: { opacity: 0, y: 20 },
-        visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
+        hidden: { opacity: 0, y: 30 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] } }
     };
 
     return (
-        <div className={`relative min-h-screen overflow-hidden transition-colors duration-500 ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
-
-            {/* Dynamic Background Elements */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className={`absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full blur-[100px] mix-blend-multiply opacity-20 animate-blob ${isDarkMode ? 'bg-emerald-900' : 'bg-emerald-200'
-                    }`}></div>
-                <div className={`absolute top-[20%] -right-[10%] w-[60vw] h-[60vw] rounded-full blur-[100px] mix-blend-multiply opacity-20 animate-blob animation-delay-2000 ${isDarkMode ? 'bg-blue-900' : 'bg-cyan-200'
-                    }`}></div>
-                <div className={`absolute -bottom-[20%] left-[20%] w-[60vw] h-[60vw] rounded-full blur-[100px] mix-blend-multiply opacity-20 animate-blob animation-delay-4000 ${isDarkMode ? 'bg-purple-900' : 'bg-violet-200'
-                    }`}></div>
-            </div>
-
-            {/* 3D Background - Subtler in Light Mode */}
-            <div className={`absolute inset-0 z-0 ${isDarkMode ? 'opacity-100' : 'opacity-30'}`}>
+        <div className={`relative min-h-screen overflow-hidden transition-colors duration-1000 font-sans ${isDarkMode
+            ? 'bg-[#0c0a09]'
+            : (environmentalMode ? 'bg-transparent' : 'bg-[#e7e5e4]')
+            }`}>
+            {/* Background - matching About/Contact page structure */}
+            <div className="fixed inset-0 z-0 pointer-events-none">
                 <Background3D />
             </div>
 
-            {/* Hero Section */}
-            <div className="relative z-10 pt-32 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+            {/* 🔥 HERO SECTION */}
+            <div className="relative z-10 pt-40 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto flex flex-col items-center justify-center text-center min-h-[90vh]">
                 <motion.div
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
-                    className="text-center"
+                    className="flex flex-col items-center max-w-5xl"
                 >
-                    <motion.div variants={itemVariants} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-8 backdrop-blur-md">
-                        <Leaf className="w-4 h-4 text-emerald-500" />
-                        <span className={`text-sm font-medium ${isDarkMode ? 'text-emerald-300' : 'text-emerald-700'}`}>
-                            Nature-Intelligent Design
+                    <motion.div
+                        variants={itemVariants}
+                        className="mb-6 flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-md cursor-pointer hover:bg-emerald-500/20 transition-colors"
+                        onClick={() => setEnvironmentalMode(!environmentalMode)}
+                    >
+                        <span className="relative flex h-2 w-2">
+                            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${environmentalMode ? 'bg-emerald-400' : 'bg-gray-400'}`}></span>
+                            <span className={`relative inline-flex rounded-full h-2 w-2 ${environmentalMode ? 'bg-emerald-500' : 'bg-gray-500'}`}></span>
+                        </span>
+                        <span className={`text-xs font-bold tracking-widest uppercase ${environmentalMode ? 'text-emerald-500' : 'text-gray-500'}`}>
+                            {environmentalMode ? 'Environmental Mode: ON' : 'Environmental Mode: OFF'}
                         </span>
                     </motion.div>
 
                     <motion.h1
                         variants={itemVariants}
-                        className={`text-6xl md:text-8xl font-bold tracking-tight mb-8 leading-tight ${isDarkMode
-                                ? 'text-transparent bg-clip-text bg-gradient-to-b from-white via-gray-200 to-gray-500'
-                                : 'text-gray-900'
-                            }`}
+                        className={`text-6xl md:text-8xl lg:text-9xl font-semibold tracking-tighter mb-8 leading-[0.95] ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
                     >
-                        Discover Your <br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-cyan-500">True Nature</span>
+                        Reconnect With the <br />
+                        <span className={`text-transparent bg-clip-text bg-gradient-to-r ${isDarkMode
+                            ? 'from-emerald-400 via-teal-400 to-cyan-400'
+                            : 'from-emerald-700 via-teal-600 to-cyan-700'
+                            }`}>
+                            Environment
+                        </span> Around You.
                     </motion.h1>
 
                     <motion.p
                         variants={itemVariants}
-                        className={`text-xl md:text-2xl max-w-3xl mx-auto mb-12 leading-relaxed ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                            }`}
+                        className={`text-xl md:text-2xl max-w-3xl mx-auto mb-12 leading-relaxed font-light ${isDarkMode ? 'text-gray-400' : 'text-gray-700'}`}
                     >
-                        Prakriti uses advanced cognitive styling to map your personality to nature's fundamental rhythms.
-                        <br className="hidden md:block" />
-                        Understand your mind, body, and environment in sync.
+                        In a world of screens and data, we help you understand how the environment truly affects your life — and what you can do about it.
                     </motion.p>
 
-                    <motion.div
-                        variants={itemVariants}
-                        className="flex flex-col sm:flex-row gap-4 justify-center"
-                    >
-                        <Link
-                            to="/assessment"
-                            className="group relative px-8 py-4 rounded-full text-lg font-bold bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30 transition-all hover:scale-105 hover:shadow-emerald-500/50 flex items-center justify-center gap-2 overflow-hidden"
+                    <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-6 items-center">
+                        {user ? (
+                            <Link
+                                to="/dashboard"
+                                className="group relative px-10 py-5 rounded-full overflow-hidden transition-all duration-300 hover:scale-105 active:scale-95 bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-[0_10px_40px_-10px_rgba(16,185,129,0.5)]"
+                            >
+                                <span className="relative z-10 flex items-center gap-3 font-bold tracking-wide">
+                                    GO TO DASHBOARD <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                </span>
+                            </Link>
+                        ) : (
+                            <Link
+                                to="/signup"
+                                className="group relative px-10 py-5 rounded-full overflow-hidden transition-all duration-300 hover:scale-105 active:scale-95 bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-[0_10px_40px_-10px_rgba(16,185,129,0.5)]"
+                            >
+                                <span className="relative z-10 flex items-center gap-3 font-bold tracking-wide">
+                                    GET STARTED <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                </span>
+                            </Link>
+                        )}
+
+                        <a
+                            href="#how-it-works"
+                            className={`px-8 py-5 rounded-full font-medium tracking-wide transition-all border ${isDarkMode ? 'border-white/10 text-gray-300 hover:bg-white/10' : 'border-gray-300 text-gray-600 hover:bg-gray-100'}`}
                         >
-                            <span className="relative z-10 flex items-center gap-2">Start Assessment <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></span>
-                            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                        </Link>
-                        <Link
-                            to="/about"
-                            className={`px-8 py-4 rounded-full text-lg font-bold border transition-all hover:scale-105 backdrop-blur-sm ${isDarkMode
-                                    ? 'border-white/10 hover:bg-white/5 text-white'
-                                    : 'border-gray-200 hover:bg-white/50 text-gray-700'
-                                }`}
-                        >
-                            Learn More
-                        </Link>
+                            SEE HOW IT WORKS
+                        </a>
                     </motion.div>
                 </motion.div>
             </div>
 
-            {/* How It Works Section */}
-            <div className={`py-24 relative z-10 ${isDarkMode ? 'bg-black/20' : 'bg-white/40'} backdrop-blur-lg`}>
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {/* 🧠 SECTION 1 — The Problem (Emotional Hook) */}
+            <div className={`relative z-10 py-32 ${isDarkMode ? 'bg-black/20' : 'bg-white/60'} backdrop-blur-sm`}>
+                <div className="max-w-4xl mx-auto px-6 text-center">
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 40 }}
                         whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        className="text-center mb-16"
+                        viewport={{ once: true, margin: "-100px" }}
+                        transition={{ duration: 0.8 }}
                     >
-                        <h2 className={`text-4xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>How It Works</h2>
-                        <p className={`text-lg max-w-2xl mx-auto ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                            A seamless journey from cognitive assessment to environmental alignment.
-                        </p>
+                        <h2 className={`text-4xl md:text-6xl font-bold mb-12 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                            We Know the Data. <br />
+                            <span className="text-gray-500">But We Don’t Feel the Impact.</span>
+                        </h2>
+
+                        <div className={`space-y-8 text-xl leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            <p>
+                                We live in an age of constant notifications, dashboards, and statistics.
+                                <br />
+                                <span className={`font-bold ${isDarkMode ? 'text-emerald-500' : 'text-teal-700'}`}>Air Quality Index. Temperature. Pollution alerts.</span>
+                            </p>
+                            <p className="text-2xl font-serif italic opacity-80">
+                                "But numbers alone don’t change behavior."
+                            </p>
+                            <p>
+                                We rarely understand how these invisible forces affect our breathing, our mood, our energy, and our long-term health.
+                                And slowly, without realizing it, we lose our connection with the physical world around us.
+                            </p>
+                            <p className={`uppercase tracking-widest font-bold pt-4 ${isDarkMode ? 'text-emerald-500' : 'text-teal-700'}`}>
+                                Prakriti exists to restore that connection.
+                            </p>
+                        </div>
                     </motion.div>
+                </div>
+            </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-                        {/* Connection Line (Desktop) */}
-                        <div className={`hidden md:block absolute top-[2.5rem] left-[16%] right-[16%] h-0.5 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}></div>
+            {/* ⚙️ SECTION 2 — How It Works */}
+            <div id="how-it-works" className="relative z-10 py-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+                <div className="text-center mb-24">
+                    <h2 className={`text-4xl md:text-5xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>How It Works</h2>
+                    <div className="h-1 w-20 bg-emerald-500 mx-auto rounded-full"></div>
+                </div>
 
-                        <StepCard
-                            number="01"
-                            title="Cognitive Mapping"
-                            description="Answer 10 adaptive questions to determine your abstract thinking and social recharge energy."
-                            icon={<Brain className="w-6 h-6" />}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative">
+                    {/* Connecting Line */}
+                    <div className={`hidden md:block absolute top-[60px] left-[12%] right-[12%] h-0.5 ${isDarkMode ? 'bg-white/10' : 'bg-gray-300'}`}></div>
+
+                    <WorkStep
+                        step="01"
+                        title="Understand You"
+                        desc="We begin with a behavioral and health profile to capture your cognitive style and sensitivity."
+                        icon={<User className="w-6 h-6" />}
+                        isDarkMode={isDarkMode}
+                    />
+                    <WorkStep
+                        step="02"
+                        title="Analyze Environment"
+                        desc="We integrate real-time environmental data — air quality, weather, and exposure trends."
+                        icon={<Globe className="w-6 h-6" />}
+                        isDarkMode={isDarkMode}
+                    />
+                    <WorkStep
+                        step="03"
+                        title="Personalize Impact"
+                        desc="We translate complex environmental metrics into meaningful, personalized insights."
+                        icon={<Brain className="w-6 h-6" />}
+                        isDarkMode={isDarkMode}
+                    />
+                    <WorkStep
+                        step="04"
+                        title="Guide Action"
+                        desc="We recommend small, realistic actions that improve your well-being and footprint."
+                        icon={<CheckCircle className="w-6 h-6" />}
+                        isDarkMode={isDarkMode}
+                    />
+                </div>
+            </div>
+
+            {/* 🌿 SECTION 3 — Core Features */}
+            <div className={`relative z-10 py-32 ${isDarkMode ? 'bg-gradient-to-b from-transparent to-black/40' : 'bg-gradient-to-b from-white/40 to-white/70'}`}>
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="mb-20">
+                        <h2 className={`text-4xl md:text-5xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Core Features</h2>
+                        <p className={`text-xl ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Everything you need to thrive in your environment.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <FeatureCard
+                            icon={<Brain className="text-emerald-400" />}
+                            title="Personalized Intelligence"
+                            desc="Not generic alerts. Context-aware insights tailored to your specific profile and health needs."
                             isDarkMode={isDarkMode}
                         />
-                        <StepCard
-                            number="02"
-                            title="Biometric Sync"
-                            description="Input your physical parameters and health constraints to calibrate your activity threshold."
-                            icon={<Activity className="w-6 h-6" />}
+                        <FeatureCard
+                            icon={<Activity className="text-teal-400" />}
+                            title="Real-Time Awareness"
+                            desc="Live AQI, weather, and exposure insights powered by official data sources and local sensors."
                             isDarkMode={isDarkMode}
                         />
-                        <StepCard
-                            number="03"
-                            title="Environmental Lock"
-                            description="Receive your personalized dashboard with real-time AQI and circadian phase alignment."
-                            icon={<Layers className="w-6 h-6" />}
+                        <FeatureCard
+                            icon={<Layers className="text-cyan-400" />}
+                            title="Counterfactual Simulation"
+                            desc="“What would change if I did this?” See the projected impact before you make a decision."
+                            isDarkMode={isDarkMode}
+                        />
+                        <FeatureCard
+                            icon={<MessageSquare className="text-violet-400" />}
+                            title="AI Companion Interface"
+                            desc="A conversational interface that explains your environment in simple, human language."
+                            isDarkMode={isDarkMode}
+                        />
+                        <FeatureCard
+                            icon={<Smartphone className="text-amber-400" />}
+                            title="Behavior-Driven Actions"
+                            desc="Action suggestions ranked by effort, impact, and feasibility for your daily life."
+                            isDarkMode={isDarkMode}
+                        />
+                        <FeatureCard
+                            icon={<BarChart3 className="text-rose-400" />}
+                            title="Exposure Tracking"
+                            desc="Visualize your exposure trends over time to manage long-term health risks."
                             isDarkMode={isDarkMode}
                         />
                     </div>
                 </div>
             </div>
 
-            {/* The Science / Features Grid */}
-            <div className="py-24 relative z-10">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        className="mb-16"
-                    >
-                        <h2 className={`text-4xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>The Science of Prakriti</h2>
-                        <p className={`text-lg max-w-2xl ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                            Drawing from ecological psychology and chronobiology.
-                        </p>
-                    </motion.div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <FeatureCard
-                            icon={<Activity className="w-6 h-6 text-emerald-400" />}
-                            title="Biometric Analog"
-                            description="Map your physical intensity and health markers to natural elements."
-                            isDarkMode={isDarkMode}
-                        />
-                        <FeatureCard
-                            icon={<Shield className="w-6 h-6 text-blue-400" />}
-                            title="Environmental Sync"
-                            description="Align your lifestyle with your AQI sensitivity and outdoor affinity."
-                            isDarkMode={isDarkMode}
-                        />
-                        <FeatureCard
-                            icon={<Zap className="w-6 h-6 text-amber-400" />}
-                            title="Cognitive Flow"
-                            description="Understand your abstract thinking properties and social battery recharge rates."
-                            isDarkMode={isDarkMode}
-                        />
-                        <FeatureCard
-                            icon={<Wind className="w-6 h-6 text-cyan-400" />}
-                            title="Atmospheric Analysis"
-                            description="Real-time air quality data integration for optimal activity planning."
-                            isDarkMode={isDarkMode}
-                        />
-                        <FeatureCard
-                            icon={<CheckCircle className="w-6 h-6 text-violet-400" />}
-                            title="Routine Optimization"
-                            description="Structure vs. Flexibility analysis to design your perfect day."
-                            isDarkMode={isDarkMode}
-                        />
-                        <FeatureCard
-                            icon={<Leaf className="w-6 h-6 text-lime-400" />}
-                            title="Nature Immersion"
-                            description="Curated hobby suggestions that reconnect you with the physical world."
-                            isDarkMode={isDarkMode}
-                        />
-                    </div>
-                </div>
-            </div>
+            <Footer />
         </div>
     );
 };
 
-const StepCard = ({ number, title, description, icon, isDarkMode }) => (
-    <motion.div
-        whileHover={{ y: -10 }}
-        className={`relative p-8 rounded-3xl border text-center transition-all ${isDarkMode
-                ? 'bg-gray-800/50 border-white/5 hover:bg-gray-800'
-                : 'bg-white border-gray-100 shadow-xl shadow-gray-200/50 hover:shadow-2xl'
-            }`}
-    >
-        <div className={`w-12 h-12 mx-auto rounded-xl flex items-center justify-center mb-6 relative z-10 ${isDarkMode ? 'bg-gray-900 border border-white/10 text-white' : 'bg-emerald-50 text-emerald-600'
-            }`}>
-            {icon}
-        </div>
-        <div className={`absolute top-6 right-8 text-4xl font-bold opacity-10 ${isDarkMode ? 'text-white' : 'text-gray-900'
-            }`}>{number}</div>
-        <h3 className={`text-xl font-bold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{title}</h3>
-        <p className={`leading-relaxed text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{description}</p>
-    </motion.div>
-);
-
-const FeatureCard = ({ icon, title, description, isDarkMode }) => (
-    <motion.div
-        whileHover={{ scale: 1.02 }}
-        className={`p-6 rounded-2xl border transition-all ${isDarkMode
-                ? 'bg-white/5 border-white/5 hover:bg-white/10'
-                : 'bg-white border-gray-100 shadow-lg hover:shadow-xl'
-            }`}>
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${isDarkMode ? 'bg-white/5' : 'bg-gray-50'
+const WorkStep = ({ step, title, desc, icon, isDarkMode }) => (
+    <GlassCard className="relative p-8 flex flex-col items-center text-center">
+        <div className={`absolute -top-4 -right-2 text-5xl font-black opacity-10 ${isDarkMode ? 'text-white' : 'text-emerald-800'}`}>{step}</div>
+        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-5 transition-all duration-300 ${isDarkMode
+            ? 'bg-emerald-500/20 text-emerald-400'
+            : 'bg-emerald-100 text-emerald-700'
             }`}>
             {icon}
         </div>
         <h3 className={`text-lg font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{title}</h3>
-        <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{description}</p>
-    </motion.div>
+        <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{desc}</p>
+    </GlassCard>
+);
+
+const FeatureCard = ({ icon, title, desc, isDarkMode }) => (
+    <GlassCard className="p-8 h-full">
+        <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 ${isDarkMode ? 'bg-white/5' : 'bg-gray-100/50'}`}>
+            {React.cloneElement(icon, { className: `w-6 h-6 ${icon.props.className}` })}
+        </div>
+        <h3 className={`text-xl font-bold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{title}</h3>
+        <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{desc}</p>
+    </GlassCard>
 );
 
 export default LandingPage;

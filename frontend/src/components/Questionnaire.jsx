@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Background3D from './Background3D';
+import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
+import Layout from './Layout';
 import {
     IntroStep,
     LikertStep,
@@ -10,13 +12,13 @@ import {
     ConstraintStep,
     CompletionStep
 } from './QuestionnaireSteps';
-import { ChevronRight } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
-const TOTAL_STEPS = 6; // Intro, Likert, Diseases, Interests, Hobbies, Constraints
+// Steps: Intro (0), Likert (1), Diseases (2), Interests (3), Hobbies (4), Constraints (5) -> Completion (6)
 
 const Questionnaire = () => {
     const { isDarkMode } = useTheme();
+    const navigate = useNavigate();
     const [step, setStep] = useState(0);
     const [direction, setDirection] = useState(1);
 
@@ -33,7 +35,8 @@ const Questionnaire = () => {
     });
 
     const handleNext = () => {
-        if (step < TOTAL_STEPS) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (step < 5) {
             setDirection(1);
             setStep(prev => prev + 1);
         } else {
@@ -42,6 +45,7 @@ const Questionnaire = () => {
     };
 
     const handleBack = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         if (step > 0) {
             setDirection(-1);
             setStep(prev => prev - 1);
@@ -62,16 +66,51 @@ const Questionnaire = () => {
             diseases: formData.diseases.length === 0 ? [] : formData.diseases,
             selected_interests: formData.selected_interests,
             hobbies: formData.hobbies,
-            constraints: formData.constraints
+            constraints: {
+                max_physical_intensity: formData.constraints.max_physical_intensity || 'med',
+                aqi_sensitivity: formData.constraints.aqi_sensitivity || 'med'
+            }
         };
 
         console.log("FINAL PAYLOAD:", JSON.stringify(payload, null, 2));
-        // Here you would typically send to backend
-        // await submitToBackend(payload);
-        setStep(prev => prev + 1); // Go to completion
-        setTimeout(() => {
-            window.location.href = '/dashboard';
-        }, 3000);
+
+        try {
+            // Send to backend
+            await api.post('/user/onboarding', payload);
+
+            // Show completion animation
+            setStep(6);
+
+            // Navigate to dashboard with payload after delay
+            setTimeout(() => {
+                navigate('/dashboard', { state: { submission: payload } });
+            }, 2000);
+        } catch (error) {
+            console.error("Failed to submit assessment:", error);
+            // Optionally handle error UI here
+            alert("Failed to save assessment. Please try again.");
+        }
+    };
+
+    const handleSkip = async () => {
+        const payload = {
+            answers: Array(10).fill(3),
+            diseases: [],
+            selected_interests: [],
+            hobbies: [],
+            constraints: {
+                max_physical_intensity: 'med',
+                aqi_sensitivity: 'med'
+            }
+        };
+
+        try {
+            await api.post('/user/onboarding', payload);
+            navigate('/dashboard', { state: { submission: payload } });
+        } catch (error) {
+            console.error("Failed to skip assessment:", error);
+            alert("Failed to skip assessment. Please try again.");
+        }
     };
 
     const steps = [
@@ -111,43 +150,58 @@ const Questionnaire = () => {
 
     const variants = {
         enter: (direction) => ({
-            x: direction > 0 ? 100 : -100,
+            x: direction > 0 ? 50 : -50,
             opacity: 0,
+            scale: 0.95,
+            filter: "blur(10px)"
         }),
         center: {
             zIndex: 1,
             x: 0,
             opacity: 1,
+            scale: 1,
+            filter: "blur(0px)"
         },
         exit: (direction) => ({
             zIndex: 0,
-            x: direction < 0 ? 100 : -100,
+            x: direction < 0 ? 50 : -50,
             opacity: 0,
+            scale: 0.95,
+            filter: "blur(10px)"
         }),
     };
 
     return (
-        <div className={`relative min-h-screen w-full overflow-hidden font-sans transition-colors duration-500 ${isDarkMode ? 'text-white bg-gray-900' : 'text-gray-900 bg-white'
-            }`}>
-            <Background3D />
-
-            {/* Light Mode Gradient Overlay */}
-            {!isDarkMode && (
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-sky-50 -z-10" />
-            )}
-
-            <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4 sm:p-6 md:p-12">
-                <div className="w-full max-w-4xl mx-auto">
-                    {/* Progress Bar (visible only on inner steps) */}
-                    {step > 0 && step < steps.length - 1 && (
-                        <div className={`mb-8 w-full max-w-md mx-auto h-1.5 rounded-full overflow-hidden ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'
-                            }`}>
-                            <motion.div
-                                className="h-full bg-emerald-400"
-                                initial={{ width: 0 }}
-                                animate={{ width: `${(step / (TOTAL_STEPS)) * 100}%` }}
-                                transition={{ duration: 0.5 }}
-                            />
+        <Layout>
+            <div className="relative flex flex-col items-center justify-center min-h-[85vh] w-full">
+                {step < 6 && (
+                    <div className="absolute top-4 right-4 md:top-0 md:right-4 z-10 text-right w-full flex justify-end">
+                        <button
+                            onClick={handleSkip}
+                            className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${isDarkMode ? 'border-white/10 text-gray-400 hover:bg-white/5 hover:text-white' : 'border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                                }`}
+                        >
+                            Skip / Do it later
+                        </button>
+                    </div>
+                )}
+                <div className="w-full max-w-5xl mx-auto mt-12 md:mt-16">
+                    {/* Progress Bar (visible only on inner steps and not completion) */}
+                    {step > 0 && step < 6 && (
+                        <div className="mb-8 w-full max-w-md mx-auto">
+                            <div className="flex justify-between text-xs font-medium uppercase tracking-widest opacity-60 mb-2">
+                                <span>Progress</span>
+                                <span>{Math.round((step / 6) * 100)}%</span>
+                            </div>
+                            <div className={`h-2 rounded-full overflow-hidden ${isDarkMode ? 'bg-white/10' : 'bg-white/30'
+                                }`}>
+                                <motion.div
+                                    className="h-full bg-gradient-to-r from-emerald-400 to-teal-500"
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${(step / 6) * 100}%` }}
+                                    transition={{ duration: 0.5, ease: "circOut" }}
+                                />
+                            </div>
                         </div>
                     )}
 
@@ -161,16 +215,18 @@ const Questionnaire = () => {
                             exit="exit"
                             transition={{
                                 x: { type: "spring", stiffness: 300, damping: 30 },
-                                opacity: { duration: 0.2 }
+                                opacity: { duration: 0.3 },
+                                scale: { duration: 0.3 },
+                                filter: { duration: 0.3 }
                             }}
-                            className="w-full"
+                            className="w-full flex justify-center"
                         >
                             {steps[step]}
                         </motion.div>
                     </AnimatePresence>
                 </div>
             </div>
-        </div>
+        </Layout>
     );
 };
 

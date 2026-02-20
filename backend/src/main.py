@@ -10,14 +10,32 @@ from src.api.leaderboard.views import router as leaderboard_router
 from src.api.privacy.views import router as privacy_router
 from src.api.internal.views import router as internal_router
 from src.api.session.views import router as session_router
-from src.api.behavior.views import router as behavior_router
 from src.api.interaction.views import router as interaction_router
+from src.api.behavior.views import router as system_behavior_router
+from src.api.user.behavior.views import router as user_behavior_router
 
 
+
+
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Techathon 3.0 PRAKRITI Backend",
     docs_url="/api/docs",
     redoc_url="/api/redoc"
+)
+
+# CORS Configuration
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(auth_router, prefix="/auth", tags=["Auth"])
@@ -29,6 +47,10 @@ app.include_router(growth_router, prefix="/growth", tags=["Growth"])
 app.include_router(leaderboard_router, prefix="/leaderboard", tags=["Leaderboard"])
 app.include_router(privacy_router, prefix="/privacy", tags=["Privacy"])
 app.include_router(internal_router, prefix="/internal", tags=["Internal"])
+app.include_router(user_behavior_router, prefix="/user", tags=["User Attributes"])
+app.include_router(system_behavior_router, prefix="/behavior", tags=["Behavior"])
+
+
 
 @app.on_event("startup")
 async def startup_event():

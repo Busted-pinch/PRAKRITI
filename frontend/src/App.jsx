@@ -1,4 +1,5 @@
 import React from 'react';
+import ErrorBoundary from './components/ErrorBoundary';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { ThemeProvider } from './context/ThemeContext';
@@ -8,33 +9,71 @@ import Questionnaire from './components/Questionnaire';
 import Dashboard from './pages/Dashboard';
 import About from './pages/About';
 import Contact from './pages/Contact';
+import AiCompanion from './pages/AiCompanion';
+import Profile from './pages/Profile';
 import './index.css';
 
-function AnimatedRoutes() {
-  const location = useLocation();
 
-  return (
-    <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/assessment" element={<Questionnaire />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-      </Routes>
-    </AnimatePresence>
-  );
-}
+import { EnvironmentProvider } from './context/EnvironmentContext';
+
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+
+import ChatWidget from './components/ChatWidget';
 
 function App() {
   return (
     <ThemeProvider>
-      <Router>
-        <div className="min-h-screen transition-colors duration-300">
-          <Navbar />
-          <AnimatedRoutes />
-        </div>
-      </Router>
+      <EnvironmentProvider>
+        <AuthProvider>
+          <ErrorBoundary>
+            <Router>
+              <div className="min-h-screen transition-colors duration-300">
+                <Navbar />
+                <AnimatePresence mode="wait">
+                  <Routes>
+                    <Route path="/" element={<LandingPage />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/signup" element={<Signup />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/contact" element={<Contact />} />
+                    <Route path="/companion" element={<AiCompanion />} />
+
+                    {/* Protected Routes */}
+                    <Route
+                      path="/dashboard"
+                      element={
+                        <ProtectedRoute>
+                          <Dashboard />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/assessment"
+                      element={
+                        <ProtectedRoute>
+                          <Questionnaire />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/profile"
+                      element={
+                        <ProtectedRoute>
+                          <Profile />
+                        </ProtectedRoute>
+                      }
+                    />
+                  </Routes>
+                </AnimatePresence>
+                <ChatWidget />
+              </div>
+            </Router>
+          </ErrorBoundary>
+        </AuthProvider>
+      </EnvironmentProvider>
     </ThemeProvider>
   );
 }

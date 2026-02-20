@@ -1,106 +1,201 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Activity, Wind, Sun, Moon } from 'lucide-react';
+import {
+    Wind, Map,
+    Droplets, Thermometer,
+    Leaf, Zap
+} from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useEnvironment } from '../context/EnvironmentContext';
+import GlassCard from '../components/GlassCard';
+import MapWidget from '../components/MapWidget';
+import Layout from '../components/Layout';
+import DailyInsight from '../components/DailyInsight';
+import NewsSection from '../components/NewsSection';
+import LawPolicySection from '../components/LawPolicySection';
+import api from '../services/api';
+
+// --- Helper Functions ---
+const calculatePersona = (constraints) => {
+    const intensity = constraints?.max_physical_intensity || 'med';
+    const sensitivity = constraints?.aqi_sensitivity || 'med';
+    if (intensity === 'high' && sensitivity === 'high') return { name: "Forest Guardian", desc: "Protective of nature, high energy but sensitive to quality." };
+    if (intensity === 'high' && sensitivity !== 'high') return { name: "Mountain Strider", desc: "Robust and adventurous, seeking peaks and challenges." };
+    if (intensity === 'low' && sensitivity === 'high') return { name: "Urban Zen Master", desc: "Mindful and selective, thriving in controlled environments." };
+    return { name: "River Wanderer", desc: "Adaptable and flowing, balanced in energy and sensitivity." };
+};
+
+const calculateAQITolerance = (sensitivity) => {
+    switch (sensitivity) {
+        case 'high': return 40;
+        case 'med': return 70;
+        case 'low': return 90;
+        default: return 60;
+    }
+};
+
+const RECOMMENDATIONS = [
+    { id: 1, title: 'Forest Bathing', location: 'Greenwood Sanctuary', match: 98, image: 'bg-emerald-900' },
+    { id: 2, title: 'Coastal Run', location: 'Azure Bay', match: 92, image: 'bg-blue-900' },
+    { id: 3, title: 'Urban Gardening', location: 'Community Roof', match: 85, image: 'bg-amber-900' },
+];
 
 const Dashboard = () => {
     const { isDarkMode } = useTheme();
+    const { environmentalMode, setEnvironmentalMode } = useEnvironment();
+    const [userData, setUserData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                setLoading(true);
+                const [profileRes, envRes] = await Promise.allSettled([
+                    api.get('/user/profile'),
+                    api.get('/environment/current?lat=28.6139&lon=77.2090')
+                ]);
+
+                let profileData = null;
+                let envData = null;
+
+                if (profileRes.status === 'fulfilled') {
+                    profileData = profileRes.value.data;
+                }
+                if (envRes.status === 'fulfilled') {
+                    envData = envRes.value.data;
+                }
+
+                if (!profileData?.persona) {
+                    navigate('/assessment');
+                    return;
+                }
+
+                const persona = profileData?.persona || { name: "Traveler", desc: "Your journey has just begun." };
+                const aqiValue = envData?.aqi || 42;
+                const sensitivity = profileData?.constraints?.aqi_sensitivity || 'med';
+                const tolerance = calculateAQITolerance(sensitivity);
+
+                setUserData({
+                    userName: profileData?.name || "Traveler",
+                    persona,
+                    currentAQI: aqiValue,
+                });
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchDashboardData();
+    }, []);
+
+    if (loading) {
+        return (
+            <Layout>
+                <div className="min-h-screen flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+                </div>
+            </Layout>
+        );
+    }
+
+    if (!userData) return null;
 
     return (
-        <div className={`min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'
-            }`}>
-            <div className="max-w-7xl mx-auto">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-8"
-                >
-                    <h1 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                        Welcome back, Traveler
-                    </h1>
-                    <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Your daily nature alignments are ready.
-                    </p>
-                </motion.div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* Main Stat Card */}
-                    <div className={`col-span-1 md:col-span-2 p-6 rounded-3xl border ${isDarkMode
-                            ? 'bg-gradient-to-br from-emerald-900/40 to-gray-900 border-white/10'
-                            : 'bg-white border-gray-200 shadow-sm'
-                        }`}>
-                        <div className="flex justify-between items-start mb-8">
-                            <div>
-                                <h2 className={`text-xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Current Alignment</h2>
-                                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-500 border border-emerald-500/30">
-                                    Forest Guardian
-                                </span>
-                            </div>
-                            <Activity className="text-emerald-500 w-6 h-6" />
-                        </div>
-                        <div className="space-y-4">
-                            <ProgressBar label="Social Battery" value={75} isDarkMode={isDarkMode} />
-                            <ProgressBar label="Physical Energy" value={40} isDarkMode={isDarkMode} />
-                            <ProgressBar label="Creative Flow" value={90} isDarkMode={isDarkMode} />
-                        </div>
+        <Layout>
+            <div className={`p-4 md:p-8 min-h-screen ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                {/* Header Greeting */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold flex items-center gap-2">
+                            Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500">{userData.userName}</span>
+                        </h1>
                     </div>
 
-                    {/* Environmental Card */}
-                    <div className={`p-6 rounded-3xl border ${isDarkMode
-                            ? 'bg-gray-800/50 border-white/10'
-                            : 'bg-white border-gray-200 shadow-sm'
-                        }`}>
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="p-2 rounded-lg bg-blue-500/20 text-blue-500">
-                                <Wind className="w-5 h-5" />
-                            </div>
-                            <h3 className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Air Quality</h3>
+                    {/* Environmental Mode Toggle */}
+                    <button
+                        onClick={() => setEnvironmentalMode(!environmentalMode)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${environmentalMode
+                            ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-500'
+                            : isDarkMode
+                                ? 'bg-white/5 border-white/10 text-gray-400'
+                                : 'bg-white border-gray-200 text-gray-500'
+                            }`}
+                    >
+                        <div className={`w-2 h-2 rounded-full ${environmentalMode ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+                        <span className="text-xs font-bold uppercase tracking-wider">
+                            {environmentalMode ? 'INT Mode: ON' : 'INT Mode: OFF'}
+                        </span>
+                    </button>
+                </div>
+
+                {/* Environmental Metrics Row */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+                    <GlassCard className="p-4 flex items-center gap-3" hoverEffect={false}>
+                        <div className={`p-2.5 rounded-xl ${isDarkMode ? 'bg-blue-500/20' : 'bg-blue-50'}`}>
+                            <Wind className={`w-5 h-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
                         </div>
-                        <div className="text-4xl font-bold mb-2 text-blue-500">42 <span className="text-sm text-gray-500">AQI</span></div>
-                        <p className="text-sm text-green-500 font-medium">Excellent Quality</p>
-                        <p className={`text-xs mt-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            Perfect condition for your high-intensity outdoor activities today.
-                        </p>
+                        <div>
+                            <div className={`text-xs uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>AQI</div>
+                            <div className="font-bold text-lg">{userData.currentAQI || 42}</div>
+                        </div>
+                    </GlassCard>
+                    <GlassCard className="p-4 flex items-center gap-3" hoverEffect={false}>
+                        <div className={`p-2.5 rounded-xl ${isDarkMode ? 'bg-amber-500/20' : 'bg-amber-50'}`}>
+                            <Thermometer className={`w-5 h-5 ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`} />
+                        </div>
+                        <div>
+                            <div className={`text-xs uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Temp</div>
+                            <div className="font-bold text-lg">24°C</div>
+                        </div>
+                    </GlassCard>
+                    <GlassCard className="p-4 flex items-center gap-3" hoverEffect={false}>
+                        <div className={`p-2.5 rounded-xl ${isDarkMode ? 'bg-cyan-500/20' : 'bg-cyan-50'}`}>
+                            <Droplets className={`w-5 h-5 ${isDarkMode ? 'text-cyan-400' : 'text-cyan-600'}`} />
+                        </div>
+                        <div>
+                            <div className={`text-xs uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Humidity</div>
+                            <div className="font-bold text-lg">65%</div>
+                        </div>
+                    </GlassCard>
+                    <GlassCard className="p-4 flex items-center gap-3" hoverEffect={false}>
+                        <div className={`p-2.5 rounded-xl ${isDarkMode ? 'bg-purple-500/20' : 'bg-purple-50'}`}>
+                            <Zap className={`w-5 h-5 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`} />
+                        </div>
+                        <div>
+                            <div className={`text-xs uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Energy</div>
+                            <div className="font-bold text-lg">Optimal</div>
+                        </div>
+                    </GlassCard>
+                </div>
+
+                {/* Main Grid: Environmental News & Maps */}
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+
+                    {/* Left Column: News Section */}
+                    <div className="xl:col-span-8">
+                        <NewsSection isDarkMode={isDarkMode} />
                     </div>
 
-                    {/* Time Card */}
-                    <div className={`p-6 rounded-3xl border ${isDarkMode
-                            ? 'bg-gray-800/50 border-white/10'
-                            : 'bg-white border-gray-200 shadow-sm'
-                        }`}>
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="p-2 rounded-lg bg-amber-500/20 text-amber-500">
-                                {isDarkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-                            </div>
-                            <h3 className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Circadian Phase</h3>
+                    {/* Right Column: Existing Map and Insights */}
+                    <div className="xl:col-span-4 space-y-6">
+                        <div>
+                            <h2 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Live Activity Map</h2>
+                            <MapWidget locations={RECOMMENDATIONS} />
                         </div>
-                        <div className={`text-4xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                            {new Date().getHours() > 17 || new Date().getHours() < 6 ? 'Rest' : 'Active'}
-                        </div>
-                        <p className="text-sm text-amber-500 font-medium">Melatonin Production Rising</p>
-                        <p className={`text-xs mt-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            Wind down recommended in 2 hours to match your chronotype.
-                        </p>
+                        <DailyInsight />
                     </div>
+
+                </div>
+
+                {/* Laws & Agreements Full Width Section */}
+                <div className="mt-8">
+                    <LawPolicySection isDarkMode={isDarkMode} />
                 </div>
             </div>
-        </div>
+        </Layout>
     );
 };
-
-const ProgressBar = ({ label, value, isDarkMode }) => (
-    <div>
-        <div className="flex justify-between text-sm mb-1">
-            <span className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>{label}</span>
-            <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>{value}%</span>
-        </div>
-        <div className={`h-2 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-            <div
-                className="h-full rounded-full bg-emerald-500"
-                style={{ width: `${value}%` }}
-            />
-        </div>
-    </div>
-);
-
 export default Dashboard;

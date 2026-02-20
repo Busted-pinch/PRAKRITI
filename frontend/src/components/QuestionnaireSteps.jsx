@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Check, ChevronRight, ArrowRight, Activity, Heart, Brain, Bone, Leaf, Search } from 'lucide-react';
+import { Check, ChevronRight, ArrowRight, Activity, Heart, Brain, Bone, Leaf, Search, Wind } from 'lucide-react';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useTheme } from '../context/ThemeContext';
@@ -54,81 +54,98 @@ const LIKERT_QUESTIONS = [
 ];
 
 // --- Shared UI Components ---
+// --- Shared UI Components ---
+import GlassCard from './GlassCard';
+
 const Title = ({ children, isDarkMode }) => (
-    <h2 className={`text-3xl font-bold mb-2 text-transparent bg-clip-text ${isDarkMode
-            ? 'bg-gradient-to-r from-emerald-400 to-cyan-400'
-            : 'bg-gradient-to-r from-emerald-600 to-teal-600'
+    <h2 className={`text-4xl md:text-5xl font-bold mb-4 ${isDarkMode
+        ? 'text-white'
+        : 'text-gray-900'
         }`}>
         {children}
     </h2>
 );
 
 const Subtitle = ({ children, isDarkMode }) => (
-    <p className={`mb-8 text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{children}</p>
+    <p className={`mb-10 text-lg md:text-xl leading-relaxed max-w-2xl mx-auto ${isDarkMode ? 'text-gray-300' : 'text-gray-600'
+        }`}>
+        {children}
+    </p>
 );
 
 const StepContainer = ({ children, className, isDarkMode }) => (
-    <div className={cn(
-        "w-full max-w-4xl mx-auto p-6 rounded-3xl backdrop-blur-md shadow-2xl transition-all duration-300",
-        isDarkMode
-            ? "bg-white/5 border border-white/10"
-            : "bg-white/60 border border-white/40 shadow-emerald-900/5",
-        className
-    )}>
+    <GlassCard className={cn("w-full max-w-5xl mx-auto p-8 md:p-12 transition-all duration-500", className)}>
         {children}
-    </div>
+    </GlassCard>
 );
 
-const Button = ({ onClick, disabled, children, className, isDarkMode }) => (
-    <button
-        onClick={onClick}
-        disabled={disabled}
-        className={cn(
-            "px-8 py-3 rounded-xl font-medium transition-all duration-300 flex items-center gap-2",
-            disabled
-                ? (isDarkMode ? "bg-gray-700/50 text-gray-500 cursor-not-allowed" : "bg-gray-200 text-gray-400 cursor-not-allowed")
-                : (isDarkMode
-                    ? "bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95"
-                    : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20 hover:scale-105 active:scale-95"
-                ),
-            className
-        )}
-    >
-        {children}
-    </button>
-);
+const Button = ({ onClick, disabled, children, className, isDarkMode, variant = 'primary' }) => {
+    const baseStyles = "px-8 py-4 rounded-xl font-medium transition-all duration-300 flex items-center justify-center gap-2 text-lg active:scale-95";
+
+    const variants = {
+        primary: disabled
+            ? (isDarkMode ? "bg-gray-800 text-gray-600 cursor-not-allowed" : "bg-gray-200 text-gray-400 cursor-not-allowed")
+            : (isDarkMode
+                ? "bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/20 hover:scale-[1.02]"
+                : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20 hover:scale-[1.02]"
+            ),
+        outline: disabled
+            ? "border border-gray-700 text-gray-700 cursor-not-allowed"
+            : (isDarkMode
+                ? "border border-white/20 hover:bg-white/10 text-white hover:border-white/40"
+                : "border border-gray-300 hover:bg-gray-50 text-gray-700 hover:border-emerald-500/50"
+            )
+    };
+
+    return (
+        <button
+            onClick={onClick}
+            disabled={disabled}
+            className={cn(baseStyles, variants[variant], className)}
+        >
+            {children}
+        </button>
+    );
+};
 
 // --- Steps ---
 
 export const IntroStep = ({ onNext }) => {
     const { isDarkMode } = useTheme();
     return (
-        <div className="flex flex-col items-center justify-center text-center h-[60vh] space-y-8">
+        <div className="flex flex-col items-center justify-center text-center h-[80vh] space-y-12">
             <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8 }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                className="max-w-4xl mx-auto"
             >
-                <h1 className={`text-5xl md:text-7xl font-bold tracking-tighter bg-clip-text text-transparent mb-6 ${isDarkMode
-                        ? 'bg-gradient-to-b from-white to-gray-400'
-                        : 'bg-gradient-to-b from-gray-900 to-gray-600'
+                <div className="inline-block px-4 py-1.5 rounded-full bg-emerald-500/10 text-emerald-500 font-semibold text-sm tracking-widest uppercase mb-6 border border-emerald-500/20">
+                    PRAKRITI Assessment
+                </div>
+                <h1 className={`text-6xl md:text-8xl font-bold tracking-tight mb-8 ${isDarkMode
+                    ? 'text-white'
+                    : 'text-gray-900'
                     }`}>
-                    Discover Your<br />Nature Persona
+                    Discover Your <br />
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500">Nature Persona</span>
                 </h1>
-                <p className={`text-xl max-w-2xl mx-auto leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                    A journey to understand your cognitive, physical, and environmental alignment.
-                    Takes 2 minutes.
+                <p className={`text-xl md:text-2xl max-w-2xl mx-auto leading-relaxed ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Uncover the deep connection between your cognitive style, physical energy, and the environment.
                 </p>
             </motion.div>
 
             <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.4, duration: 0.5 }}
             >
-                <Button onClick={onNext} isDarkMode={isDarkMode} className="text-lg px-10 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white">
-                    Begin Assessment <ArrowRight className="w-5 h-5" />
+                <Button onClick={onNext} isDarkMode={isDarkMode} className="text-lg px-12 py-5 shadow-2xl shadow-emerald-500/30">
+                    Begin Journey <ArrowRight className="w-6 h-6" />
                 </Button>
+                <div className={`mt-4 text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                    Takes approximately 2 minutes
+                </div>
             </motion.div>
         </div>
     );
@@ -146,53 +163,58 @@ export const LikertStep = ({ data, update, onNext, onBack }) => {
     };
 
     return (
-        <StepContainer isDarkMode={isDarkMode}>
+        <StepContainer isDarkMode={isDarkMode} className="text-center">
             <Title isDarkMode={isDarkMode}>Code Your Personality</Title>
-            <Subtitle isDarkMode={isDarkMode}>Rate how strongly you agree with each statement (1 = Strongly Disagree, 5 = Strongly Agree).</Subtitle>
+            <Subtitle isDarkMode={isDarkMode}>Rate how strongly you agree with each statement.</Subtitle>
 
-            <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="space-y-8 mb-12 text-left">
                 {LIKERT_QUESTIONS.map((question, qIndex) => (
-                    <motion.div
-                        key={qIndex}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: qIndex * 0.05 }}
-                        className={`p-4 rounded-2xl transition-colors border ${isDarkMode
-                                ? 'bg-white/5 hover:bg-white/10 border-white/5'
-                                : 'bg-white/50 hover:bg-white border-gray-100 shadow-sm'
-                            }`}
-                    >
-                        <p className={`text-lg mb-4 ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>{qIndex + 1}. {question}</p>
-                        <div className="flex justify-between items-center px-2">
-                            <span className={`text-xs uppercase tracking-widest hidden sm:block ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>Disagree</span>
-                            <div className="flex gap-2 sm:gap-4 flex-1 justify-center">
-                                {[1, 2, 3, 4, 5].map((val) => (
-                                    <button
-                                        key={val}
-                                        onClick={() => handleSelect(qIndex, val)}
-                                        className={cn(
-                                            "w-10 h-10 sm:w-12 sm:h-12 rounded-full border flex items-center justify-center transition-all duration-200",
-                                            data[qIndex] === val
-                                                ? "bg-emerald-500 text-white border-emerald-500 scale-110 shadow-lg shadow-emerald-500/30"
-                                                : (isDarkMode
-                                                    ? "bg-white/5 text-gray-400 border-white/10 hover:bg-white/20 hover:scale-105"
-                                                    : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:border-emerald-200 hover:scale-105")
-                                        )}
-                                    >
-                                        {val}
-                                    </button>
-                                ))}
-                            </div>
-                            <span className={`text-xs uppercase tracking-widest hidden sm:block ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>Agree</span>
+                    <div key={qIndex} className="space-y-4">
+                        <div className={`flex justify-between items-end ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                            <span className="text-lg font-medium">{qIndex + 1}. {question}</span>
+                            {data[qIndex] && (
+                                <span className="text-emerald-500 font-bold text-sm bg-emerald-500/10 px-2 py-1 rounded">
+                                    {data[qIndex]}/5
+                                </span>
+                            )}
                         </div>
-                    </motion.div>
+
+                        <div className={`relative h-14 rounded-2xl flex items-center justify-between px-2 ${isDarkMode ? 'bg-white/5' : 'bg-gray-100'}`}>
+                            {/* Track Line */}
+                            <div className="absolute left-6 right-6 h-0.5 bg-gray-300 dark:bg-gray-700 z-0" />
+
+                            {[1, 2, 3, 4, 5].map((val) => (
+                                <button
+                                    key={val}
+                                    onClick={() => handleSelect(qIndex, val)}
+                                    className={cn(
+                                        "relative z-10 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 border-2",
+                                        data[qIndex] === val
+                                            ? "bg-emerald-500 text-white border-emerald-500 scale-110 shadow-lg shadow-emerald-500/40 font-bold"
+                                            : (data[qIndex] > val
+                                                ? "bg-emerald-500 text-white border-emerald-500 scale-90"
+                                                : (isDarkMode
+                                                    ? "bg-gray-800 text-gray-500 border-gray-700 hover:border-gray-500"
+                                                    : "bg-white text-gray-400 border-gray-300 hover:border-gray-400")
+                                            )
+                                    )}
+                                >
+                                    {val}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="flex justify-between text-xs uppercase tracking-wider font-semibold opacity-50 px-2">
+                            <span>Strongly Disagree</span>
+                            <span>Strongly Agree</span>
+                        </div>
+                    </div>
                 ))}
             </div>
 
-            <div className={`flex justify-between mt-8 pt-4 border-t ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
-                <button onClick={onBack} className={`transition-colors ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}>Back</button>
+            <div className={`flex justify-between items-center mt-12 pt-8 border-t ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
+                <Button variant="outline" onClick={onBack} isDarkMode={isDarkMode}>Back</Button>
                 <Button onClick={onNext} disabled={!isComplete} isDarkMode={isDarkMode}>
-                    Next Step <ChevronRight className="w-4 h-4" />
+                    Next Step <ChevronRight className="w-5 h-5" />
                 </Button>
             </div>
         </StepContainer>
@@ -224,9 +246,9 @@ export const DiseaseStep = ({ data, update, onNext, onBack }) => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[55vh] overflow-y-auto pr-2 custom-scrollbar">
                 {TAXONOMY.diseases.map((group, idx) => (
-                    <div key={idx} className="space-y-3">
-                        <h3 className="text-sm font-semibold text-emerald-500 uppercase tracking-wider flex items-center gap-2">
-                            {group.icon} {group.category}
+                    <GlassCard key={idx} className={`p-5 !bg-opacity-30 ${isDarkMode ? 'bg-white/5' : 'bg-white/40'}`}>
+                        <h3 className="text-sm font-semibold text-emerald-500 uppercase tracking-wider flex items-center gap-2 mb-4">
+                            <span className="p-1.5 bg-emerald-500/10 rounded-lg">{group.icon}</span> {group.category}
                         </h3>
                         <div className="flex flex-wrap gap-2">
                             {group.items.map(item => {
@@ -236,12 +258,12 @@ export const DiseaseStep = ({ data, update, onNext, onBack }) => {
                                         key={item}
                                         onClick={() => toggleSelection(item)}
                                         className={cn(
-                                            "px-4 py-2 rounded-lg text-sm transition-all border",
+                                            "px-4 py-2 rounded-lg text-sm transition-all border font-medium",
                                             isSelected
-                                                ? "bg-emerald-500/20 border-emerald-500 text-emerald-600 dark:text-emerald-300"
+                                                ? "bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-500/20"
                                                 : (isDarkMode
                                                     ? "bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:border-white/20"
-                                                    : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-emerald-200")
+                                                    : "bg-white border-gray-200 text-gray-600 hover:bg-emerald-50 hover:border-emerald-200")
                                         )}
                                     >
                                         {item}
@@ -249,14 +271,14 @@ export const DiseaseStep = ({ data, update, onNext, onBack }) => {
                                 );
                             })}
                         </div>
-                    </div>
+                    </GlassCard>
                 ))}
             </div>
 
             <div className={`flex justify-between mt-8 pt-4 border-t ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
-                <button onClick={onBack} className={`transition-colors ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}>Back</button>
+                <Button variant="outline" onClick={onBack} isDarkMode={isDarkMode}>Back</Button>
                 <Button onClick={onNext} isDarkMode={isDarkMode}>
-                    Next Step <ChevronRight className="w-4 h-4" />
+                    Next Step <ChevronRight className="w-5 h-5" />
                 </Button>
             </div>
         </StepContainer>
@@ -282,26 +304,26 @@ export const InterestStep = ({ data, update, onNext, onBack }) => {
             <div className="space-y-6 max-h-[55vh] overflow-y-auto pr-2 custom-scrollbar">
                 {TAXONOMY.interests.map((group, idx) => (
                     <div key={idx}>
-                        <h3 className={`text-sm mb-2 pl-1 font-medium ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{group.category}</h3>
+                        <h3 className={`text-sm mb-3 pl-1 font-bold uppercase tracking-wider ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>{group.category}</h3>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             {group.items.map(item => (
                                 <button
                                     key={item}
                                     onClick={() => toggleSelection(item)}
                                     className={cn(
-                                        "p-3 rounded-xl text-left text-sm transition-all border relative overflow-hidden group",
+                                        "p-4 rounded-xl text-left text-sm transition-all border relative overflow-hidden group font-medium",
                                         data.includes(item)
-                                            ? "bg-blue-500/20 border-blue-400 text-blue-600 dark:text-blue-200"
+                                            ? "bg-teal-500 text-white border-teal-500 shadow-lg shadow-teal-500/20"
                                             : (isDarkMode
-                                                ? "bg-white/5 border-white/10 text-gray-300 hover:bg-white/10"
-                                                : "bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:bg-blue-50")
+                                                ? "bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20"
+                                                : "bg-white border-gray-200 text-gray-600 hover:border-teal-300 hover:bg-teal-50")
                                     )}
                                 >
                                     <span className="relative z-10 capitalize">{item}</span>
                                     {data.includes(item) && (
                                         <motion.div
-                                            layoutId="highlight"
-                                            className="absolute inset-0 bg-blue-500/10"
+                                            layoutId="highlight_interest"
+                                            className="absolute inset-0 bg-emerald-500/10"
                                         />
                                     )}
                                 </button>
@@ -312,9 +334,9 @@ export const InterestStep = ({ data, update, onNext, onBack }) => {
             </div>
 
             <div className={`flex justify-between mt-8 pt-4 border-t ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
-                <button onClick={onBack} className={`transition-colors ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}>Back</button>
+                <Button variant="outline" onClick={onBack} isDarkMode={isDarkMode}>Back</Button>
                 <Button onClick={onNext} disabled={data.length === 0} isDarkMode={isDarkMode}>
-                    Next Step <ChevronRight className="w-4 h-4" />
+                    Next Step <ChevronRight className="w-5 h-5" />
                 </Button>
             </div>
         </StepContainer>
@@ -346,39 +368,42 @@ export const HobbyStep = ({ data, update, onNext, onBack }) => {
             <Title isDarkMode={isDarkMode}>Active Pursuits</Title>
             <Subtitle isDarkMode={isDarkMode}>What do you actually do in your free time?</Subtitle>
 
-            <div className="relative mb-6">
-                <Search className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
+            <div className="relative mb-8">
+                <Search className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-400'}`} />
                 <input
                     type="text"
                     placeholder="Search hobbies..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className={`w-full border rounded-xl py-3 pl-12 pr-4 transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isDarkMode
-                            ? "bg-white/5 border-white/10 text-white placeholder-gray-500 focus:bg-white/10"
-                            : "bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-emerald-500"
+                    className={`w-full border rounded-xl py-4 pl-12 pr-4 transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium ${isDarkMode
+                        ? "bg-white/5 border-white/10 text-white placeholder-gray-500 focus:bg-white/10"
+                        : "bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-emerald-500"
                         }`}
                 />
             </div>
 
-            <div className="space-y-6 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="space-y-8 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
                 {filteredHobbies.length === 0 ? (
-                    <p className="text-center text-gray-500 py-10">No hobbies found matching "{search}"</p>
+                    <div className="text-center py-12 opacity-50">
+                        <Leaf className="w-12 h-12 mx-auto mb-4 text-emerald-500/50" />
+                        <p className="text-lg">No hobbies found matching "{search}"</p>
+                    </div>
                 ) : (
                     filteredHobbies.map((group, idx) => (
                         <div key={idx}>
-                            <h3 className="text-sm text-emerald-500 mb-2 pl-1 font-medium">{group.category}</h3>
+                            <h3 className="text-sm text-emerald-500 mb-3 pl-1 font-bold uppercase tracking-wider">{group.category}</h3>
                             <div className="flex flex-wrap gap-2">
                                 {group.items.map(item => (
                                     <button
                                         key={item}
                                         onClick={() => toggleSelection(item)}
                                         className={cn(
-                                            "px-4 py-2 rounded-full text-sm transition-all border",
+                                            "px-4 py-2 rounded-full text-sm transition-all border font-medium",
                                             data.includes(item)
                                                 ? "bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20"
                                                 : (isDarkMode
                                                     ? "bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:border-white/20"
-                                                    : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-emerald-300")
+                                                    : "bg-white border-gray-200 text-gray-600 hover:bg-emerald-50 hover:border-emerald-300")
                                         )}
                                     >
                                         {item}
@@ -391,9 +416,9 @@ export const HobbyStep = ({ data, update, onNext, onBack }) => {
             </div>
 
             <div className={`flex justify-between mt-8 pt-4 border-t ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
-                <button onClick={onBack} className={`transition-colors ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}>Back</button>
+                <Button variant="outline" onClick={onBack} isDarkMode={isDarkMode}>Back</Button>
                 <Button onClick={onNext} isDarkMode={isDarkMode}>
-                    Next Step <ChevronRight className="w-4 h-4" />
+                    Next Step <ChevronRight className="w-5 h-5" />
                 </Button>
             </div>
         </StepContainer>
@@ -402,8 +427,8 @@ export const HobbyStep = ({ data, update, onNext, onBack }) => {
 
 export const ConstraintStep = ({ data, update, onNext, onBack }) => {
     const { isDarkMode } = useTheme();
-    const intensities = ['Low', 'Medium', 'High'];
-    const aqiSensitivities = ['Low', 'Medium', 'High'];
+    const intensities = ['Low', 'Med', 'High'];
+    const aqiSensitivities = ['Low', 'Med', 'High'];
 
     const isComplete = data.max_physical_intensity && data.aqi_sensitivity;
 
@@ -412,38 +437,51 @@ export const ConstraintStep = ({ data, update, onNext, onBack }) => {
             <Title isDarkMode={isDarkMode}>Final Configurations</Title>
             <Subtitle isDarkMode={isDarkMode}>Calibrating your physical bounds.</Subtitle>
 
-            <div className="space-y-12 py-8">
-                <div>
-                    <h3 className={`text-xl font-medium mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Max Physical Intensity</h3>
+            <div className="space-y-8 py-4">
+                <GlassCard className={`p-6 ${isDarkMode ? 'bg-white/5' : 'bg-white/40'}`}>
+                    <h3 className={`text-xl font-medium mb-6 flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        <Activity className="w-6 h-6 text-emerald-500" />
+                        Max Physical Intensity
+                    </h3>
                     <div className="grid grid-cols-3 gap-4">
                         {intensities.map(level => (
                             <button
                                 key={level}
                                 onClick={() => update({ ...data, max_physical_intensity: level.toLowerCase() })}
                                 className={cn(
-                                    "p-4 rounded-xl border transition-all text-center",
+                                    "p-4 rounded-xl border transition-all text-center relative overflow-hidden group",
                                     data.max_physical_intensity === level.toLowerCase()
                                         ? "bg-emerald-500 border-emerald-500 text-white shadow-lg"
                                         : (isDarkMode
                                             ? "bg-white/5 border-white/10 text-gray-400 hover:bg-white/10"
-                                            : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-emerald-300")
+                                            : "bg-white border-gray-200 text-gray-600 hover:bg-emerald-50 hover:border-emerald-300")
                                 )}
                             >
-                                {level}
+                                <span className="relative z-10 font-medium">{level}</span>
+                                {data.max_physical_intensity === level.toLowerCase() && (
+                                    <motion.div
+                                        layoutId="highlight_intensity"
+                                        className="absolute inset-0 bg-white/20"
+                                        transition={{ duration: 0.2 }}
+                                    />
+                                )}
                             </button>
                         ))}
                     </div>
-                </div>
+                </GlassCard>
 
-                <div>
-                    <h3 className={`text-xl font-medium mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>AQI Sensitivity</h3>
+                <GlassCard className={`p-6 ${isDarkMode ? 'bg-white/5' : 'bg-white/40'}`}>
+                    <h3 className={`text-xl font-medium mb-6 flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        <Wind className="w-6 h-6 text-blue-500" />
+                        AQI Sensitivity
+                    </h3>
                     <div className="grid grid-cols-3 gap-4">
                         {aqiSensitivities.map(level => (
                             <button
                                 key={level}
                                 onClick={() => update({ ...data, aqi_sensitivity: level.toLowerCase() })}
                                 className={cn(
-                                    "p-4 rounded-xl border transition-all text-center",
+                                    "p-4 rounded-xl border transition-all text-center relative overflow-hidden group",
                                     data.aqi_sensitivity === level.toLowerCase()
                                         ? "bg-blue-500 border-blue-500 text-white shadow-lg"
                                         : (isDarkMode
@@ -451,17 +489,24 @@ export const ConstraintStep = ({ data, update, onNext, onBack }) => {
                                             : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-blue-300")
                                 )}
                             >
-                                {level}
+                                <span className="relative z-10 font-medium">{level}</span>
+                                {data.aqi_sensitivity === level.toLowerCase() && (
+                                    <motion.div
+                                        layoutId="highlight_aqi"
+                                        className="absolute inset-0 bg-white/20"
+                                        transition={{ duration: 0.2 }}
+                                    />
+                                )}
                             </button>
                         ))}
                     </div>
-                </div>
+                </GlassCard>
             </div>
 
             <div className={`flex justify-between mt-8 pt-4 border-t ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
-                <button onClick={onBack} className={`transition-colors ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}>Back</button>
+                <Button variant="outline" onClick={onBack} isDarkMode={isDarkMode}>Back</Button>
                 <Button onClick={onNext} disabled={!isComplete} isDarkMode={isDarkMode}>
-                    Complete Profile <Check className="w-4 h-4" />
+                    Complete Profile <Check className="w-5 h-5" />
                 </Button>
             </div>
         </StepContainer>
@@ -471,26 +516,45 @@ export const ConstraintStep = ({ data, update, onNext, onBack }) => {
 export const CompletionStep = () => {
     const { isDarkMode } = useTheme();
     return (
-        <div className="flex flex-col items-center justify-center text-center h-[60vh] space-y-8">
-            <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5 }}
-                className="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center shadow-2xl shadow-emerald-500/50"
-            >
-                <Check className="w-12 h-12 text-white" />
-            </motion.div>
-            <div>
-                <h1 className={`text-4xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Profile Calibrated</h1>
-                <p className={`max-w-md mx-auto ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Your nature persona has been successfully analyzed. We are now generating your personalized wellness plan.
-                </p>
+        <div className="flex flex-col items-center justify-center text-center h-[60vh] space-y-12">
+            <div className="relative">
+                <motion.div
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.5, type: "spring" }}
+                    className="w-32 h-32 bg-emerald-500 rounded-full flex items-center justify-center shadow-2xl shadow-emerald-500/40 relative z-10"
+                >
+                    <Check className="w-16 h-16 text-white" />
+                </motion.div>
+                <motion.div
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1.5, opacity: 0 }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut" }}
+                    className="absolute inset-0 bg-emerald-500/50 rounded-full z-0"
+                />
             </div>
 
-            <div className="flex gap-2 items-center text-emerald-400 text-sm animate-pulse">
-                <Activity className="w-4 h-4" />
-                <span>Processing biometric analogs...</span>
-            </div>
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="space-y-4"
+            >
+                <h1 className={`text-5xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Profile Calibrated</h1>
+                <p className={`max-w-lg mx-auto text-xl ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Your nature persona has been successfully analyzed. <br />Generating your personalized wellness plan.
+                </p>
+            </motion.div>
+
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6 }}
+                className="flex gap-3 items-center px-6 py-3 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-sm font-medium animate-pulse"
+            >
+                <Activity className="w-5 h-5" />
+                <span>Processing biometrics...</span>
+            </motion.div>
         </div>
     );
 };
