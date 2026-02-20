@@ -9,7 +9,7 @@ def merge_dicts(a: Dict[str, Any], b: Dict[str, Any]) -> Dict[str, Any]:
 class UnifiedState(TypedDict):
     """
     Unified state for the LangGraph agent system.
-    
+
     Attributes:
         messages: The conversation history.
         next_agent: The name of the next agent to execute (set by Supervisor).
@@ -22,5 +22,7 @@ class UnifiedState(TypedDict):
     next_agent: Optional[str]
     structured_data: Annotated[Dict[str, Any], merge_dicts]
     user_id: Optional[str]
+    lat: Optional[float]
+    lon: Optional[float]
     error: Optional[str]
     final_response: Optional[str]
