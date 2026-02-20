@@ -1,7 +1,9 @@
 -- Enable necessary extensions
 create extension if not exists "uuid-ossp";
 
+-- =========================
 -- PROFILES
+-- =========================
 create table if not exists public.profiles (
   id uuid references auth.users on delete cascade primary key,
   email text,
@@ -14,7 +16,9 @@ create table if not exists public.profiles (
   updated_at timestamptz default now()
 );
 
+-- =========================
 -- DIGITAL TWINS
+-- =========================
 create table if not exists public.digital_twins (
   id uuid references public.profiles(id) on delete cascade primary key,
   health_metrics jsonb default '{}'::jsonb,
@@ -22,7 +26,9 @@ create table if not exists public.digital_twins (
   last_synced_at timestamptz default now()
 );
 
+-- =========================
 -- SIMULATIONS
+-- =========================
 create table if not exists public.simulations (
   id uuid default uuid_generate_v4() primary key,
   user_id uuid references public.profiles(id),
@@ -31,7 +37,9 @@ create table if not exists public.simulations (
   executed_at timestamptz default now()
 );
 
+-- =========================
 -- ENVIRONMENTAL READINGS
+-- =========================
 create table if not exists public.environmental_readings (
   id uuid default uuid_generate_v4() primary key,
   location jsonb,
@@ -42,7 +50,10 @@ create table if not exists public.environmental_readings (
   is_forecast boolean default false
 );
 
--- Indexes for performance
+-- =========================
+-- INDEXES (FIXED + OPTIMIZED)
+-- =========================
+
 create index if not exists idx_env_data_type
 on public.environmental_readings (data_type);
 
@@ -52,8 +63,9 @@ on public.environmental_readings (recorded_at);
 create index if not exists idx_env_lat
 on public.environmental_readings ((location->>'lat'));
 
+-- 🔥 FIXED (was "long")
 create index if not exists idx_env_lon
-on public.environmental_readings ((location->>'long'));
+on public.environmental_readings ((location->>'lon'));
 
 create index if not exists idx_env_value
 on public.environmental_readings ((readings->>'value'));
@@ -61,7 +73,13 @@ on public.environmental_readings ((readings->>'value'));
 create index if not exists idx_env_forecast
 on public.environmental_readings (is_forecast);
 
+-- 🔥 WAQI DUPLICATE PROTECTION
+create unique index if not exists unique_waqi_snapshot
+on public.environmental_readings (data_type, recorded_at, source);
+
+-- =========================
 -- CHAT SESSIONS
+-- =========================
 create table if not exists public.chat_sessions (
   id uuid default uuid_generate_v4() primary key,
   user_id uuid references public.profiles(id),
@@ -70,7 +88,9 @@ create table if not exists public.chat_sessions (
   updated_at timestamptz default now()
 );
 
+-- =========================
 -- CHAT MESSAGES
+-- =========================
 create table if not exists public.chat_messages (
   id uuid default uuid_generate_v4() primary key,
   session_id uuid references public.chat_sessions(id) on delete cascade not null,
@@ -80,7 +100,9 @@ create table if not exists public.chat_messages (
   created_at timestamptz default now()
 );
 
--- USER ACTIVITIES (FIXED COMMA BUG)
+-- =========================
+-- USER ACTIVITIES
+-- =========================
 create table if not exists public.user_activities (
   id uuid default uuid_generate_v4() primary key,
   user_id uuid references public.profiles(id),
@@ -90,7 +112,9 @@ create table if not exists public.user_activities (
   completed_at timestamptz default now()
 );
 
--- Enable RLS
+-- =========================
+-- ENABLE RLS
+-- =========================
 alter table public.profiles enable row level security;
 alter table public.digital_twins enable row level security;
 alter table public.simulations enable row level security;
@@ -99,7 +123,10 @@ alter table public.chat_sessions enable row level security;
 alter table public.chat_messages enable row level security;
 alter table public.user_activities enable row level security;
 
--- RLS Policies
+-- =========================
+-- RLS POLICIES
+-- =========================
+
 create policy "Users can view own profile"
 on public.profiles for select
 using (auth.uid() = id);
@@ -158,7 +185,10 @@ create policy "Users can view own activities"
 on public.user_activities for select
 using (auth.uid() = user_id);
 
--- Auto-create profile & twin
+-- =========================
+-- AUTO CREATE PROFILE + DIGITAL TWIN
+-- =========================
+
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
