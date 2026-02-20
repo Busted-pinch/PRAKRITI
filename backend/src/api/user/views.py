@@ -173,11 +173,39 @@ async def get_profile(current_user = Depends(get_current_user)):
 async def update_profile(data: ProfileUpdate, current_user = Depends(get_current_user)):
     user_id = current_user.id if hasattr(current_user, 'id') else (current_user.get("sub") or current_user.get("id"))
     
-    # We only update fields that are provided
     updates = data.dict(exclude_unset=True)
-    if updates:
-        store.update_user(user_id, updates)
-        logger.debug(f"[User API - Update Profile] Applied updates for {user_id}: {updates}")
+    if not updates:
+        return {"message": "No updates provided", "data": data}
+
+    profile_updates = {}
+    if "name" in updates:
+        profile_updates["full_name"] = updates["name"]
+
+    if profile_updates:
+        store.update_user(user_id, profile_updates)
+        
+    behavior_keys = ["hobbies", "interests", "sensitivity", "risk_tolerance"]
+    if any(k in updates for k in behavior_keys):
+        existing_behavior = store.get_raw_behavior_profile(user_id) or {}
+        
+        if "hobbies" in updates:
+            existing_behavior["hobbies"] = updates["hobbies"]
+        if "interests" in updates:
+            existing_behavior["selected_interests"] = updates["interests"]
+            
+        if "sensitivity" in updates:
+            constraints = existing_behavior.get("constraints", {})
+            constraints["aqi_sensitivity"] = updates["sensitivity"]
+            existing_behavior["constraints"] = constraints
+            
+        if "risk_tolerance" in updates:
+            behavior_model = existing_behavior.get("behavior_model", {})
+            behavior_model["risk_tolerance"] = updates["risk_tolerance"]
+            existing_behavior["behavior_model"] = behavior_model
+            
+        store.upsert_behavior_profile(user_id, existing_behavior)
+
+    logger.debug(f"[User API - Update Profile] Applied updates for {user_id}: {updates}")
         
     return {"message": "Profile updated", "data": data}
 
