@@ -21,6 +21,7 @@ WEATHER_PARAMS = [
     "soil_moisture_0_1cm",
     "evapotranspiration",
     "runoff",
+    "weathercode",
 ]
 
 AIR_PARAMS = [
@@ -31,7 +32,6 @@ AIR_PARAMS = [
     "sulphur_dioxide",
     "ozone",
     "aerosol_optical_depth",
-    "uv_index",
 ]
 
 
@@ -40,7 +40,7 @@ async def fetch_weather(lat: float, lon: float):
         f"https://api.open-meteo.com/v1/forecast?"
         f"latitude={lat}&longitude={lon}"
         f"&hourly={','.join(WEATHER_PARAMS)}"
-        f"&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,uv_index"
+        f"&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,uv_index,weathercode"
         f"&forecast_days=7&timezone=auto"
     )
 

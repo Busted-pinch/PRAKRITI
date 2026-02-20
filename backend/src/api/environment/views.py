@@ -3,10 +3,15 @@ from typing import Optional
 from datetime import datetime
 from src.api.deps import get_current_user
 from src.core.supabase_client import supabase
+from src.api.environment.utils import (
+    parse_hourly,
+    map_weather_code,
+    map_aqi_category,
+    build_waqi_record
+)
+from src.core.waqi_client import fetch_waqi
 from src.core.open_meteo_client import fetch_weather, fetch_air_quality
-from src.api.environment.utils import parse_hourly
-from src.core.aqi_service import calculate_cpcb_aqi, calculate_cpcb_aqi_instant
-
+import asyncio
 from src.core.aggregate_data import AggregateData
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
@@ -20,28 +25,39 @@ store = AggregateData()
 @router.get("/current")
 async def get_current_environment(lat: float, lon: float):
 
-    weather = await fetch_weather(lat, lon)
-    air = await fetch_air_quality(lat, lon)
+    weather, air, waqi_data = await asyncio.gather(
+        fetch_weather(lat, lon),
+        fetch_air_quality(lat, lon),
+        fetch_waqi(lat, lon)
+    )
 
     current_weather = weather.get("current", {})
     hourly_air = air.get("hourly", {})
 
-    # 1️⃣ Try rolling CPCB AQI (historical mode)
-    aqi_value, dominant, category = calculate_cpcb_aqi(lat, lon)
+    weather_code = current_weather.get("weathercode")
+    weather_condition = map_weather_code(weather_code)
 
-    # 2️⃣ If no historical data → fallback to instant CPCB
-    if aqi_value is None:
+    aqi_value = None
+    dominant = None
+    station_name = None
+    aqi_time = None
 
-        instant_data = {
-            "pm2_5": hourly_air.get("pm2_5", [None])[0],
-            "pm10": hourly_air.get("pm10", [None])[0],
-            "nitrogen_dioxide": hourly_air.get("nitrogen_dioxide", [None])[0],
-            "sulphur_dioxide": hourly_air.get("sulphur_dioxide", [None])[0],
-            "ozone": hourly_air.get("ozone", [None])[0],
-            "carbon_monoxide": hourly_air.get("carbon_monoxide", [None])[0],
-        }
+    if waqi_data and isinstance(waqi_data, dict):
+        aqi_value = waqi_data.get("aqi")
+        dominant = waqi_data.get("dominentpol")
+        station_name = waqi_data.get("city", {}).get("name")
+        aqi_time = waqi_data.get("time", {}).get("s")
 
-        aqi_value, dominant, category = calculate_cpcb_aqi_instant(instant_data)
+    aqi_category = map_aqi_category(aqi_value)
+    waqi_record = build_waqi_record(lat, lon, waqi_data)
+
+    if waqi_record:
+        supabase.table("environmental_readings") \
+            .upsert(
+                waqi_record,
+                on_conflict="data_type,recorded_at,source"
+            ) \
+            .execute()
 
     return {
         "temperature": current_weather.get("temperature_2m"),
@@ -50,16 +66,20 @@ async def get_current_environment(lat: float, lon: float):
         "wind_speed": current_weather.get("wind_speed_10m"),
         "uv_index": current_weather.get("uv_index"),
 
+        "weather_code": weather_code,
+        "weather_condition": weather_condition,
+
         "pm2_5": hourly_air.get("pm2_5", [None])[0],
         "pm10": hourly_air.get("pm10", [None])[0],
         "ozone": hourly_air.get("ozone", [None])[0],
         "nitrogen_dioxide": hourly_air.get("nitrogen_dioxide", [None])[0],
 
         "aqi": aqi_value,
+        "aqi_category": aqi_category,
         "dominant_pollutant": dominant,
-        "aqi_category": category,
+        "aqi_station": station_name,
+        "aqi_timestamp": aqi_time,
     }
-
 
 # ---------------------------------------
 # HOURLY FORECAST
@@ -74,14 +94,14 @@ async def get_hourly_forecast(lat: float, lon: float):
 
     result = []
 
-    for i in range(len(time)):
+    for i, timestamp in enumerate(time):
         result.append({
-            "time": time[i],
-            "temperature": hourly.get("temperature_2m", [None])[i],
-            "humidity": hourly.get("relative_humidity_2m", [None])[i],
-            "wind_speed": hourly.get("wind_speed_10m", [None])[i],
-            "precipitation": hourly.get("precipitation", [None])[i],
-            "uv_index": hourly.get("uv_index", [None])[i],
+            "time": timestamp,
+            "temperature": hourly.get("temperature_2m", [None])[i] if i < len(hourly.get("temperature_2m", [])) else None,
+            "humidity": hourly.get("relative_humidity_2m", [None])[i] if i < len(hourly.get("relative_humidity_2m", [])) else None,
+            "wind_speed": hourly.get("wind_speed_10m", [None])[i] if i < len(hourly.get("wind_speed_10m", [])) else None,
+            "precipitation": hourly.get("precipitation", [None])[i] if i < len(hourly.get("precipitation", [])) else None,
+            "uv_index": hourly.get("uv_index", [None])[i] if i < len(hourly.get("uv_index", [])) else None,
         })
 
     return result
@@ -149,8 +169,10 @@ async def get_exposure_history(start: str, end: str):
 @router.post("/collect")
 async def collect_environment(session_id: str, lat: float, lon: float):
 
-    weather = await fetch_weather(lat, lon)
-    air = await fetch_air_quality(lat, lon)
+    weather, air = await asyncio.gather(
+        fetch_weather(lat, lon),
+        fetch_air_quality(lat, lon)
+    )
 
     weather_rows = parse_hourly(weather, lat, lon, "open-meteo-weather", True)
     air_rows = parse_hourly(air, lat, lon, "open-meteo-air", True)
