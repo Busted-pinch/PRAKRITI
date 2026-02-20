@@ -175,11 +175,11 @@ const Background3D = () => {
         <div className={`fixed inset-0 z-0 pointer-events-none transition-colors duration-2000 ${isDarkMode
             ? 'bg-gradient-to-b from-slate-900 to-slate-950'
             : (environmentalMode
-                ? 'bg-gradient-to-br from-emerald-100 via-teal-100 to-blue-100'
+                ? 'bg-gradient-to-br from-emerald-50 via-teal-50 to-sky-50'
                 : 'bg-transparent')
             }`}>
             <div className={`absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] transition-opacity duration-1000 ${environmentalMode
-                ? (isLandingPage && !isDarkMode ? 'opacity-0' : 'opacity-20')
+                ? (isLandingPage && !isDarkMode ? 'opacity-0' : 'opacity-10')
                 : 'opacity-40 brightness-50 contrast-150'
                 } mix-blend-overlay`}></div>
 
@@ -192,13 +192,15 @@ const Background3D = () => {
 
             {/* Vanta Fog - Only in Light Mode + Environmental Mode */}
             {!isDarkMode && environmentalMode && (
-                <div className="absolute inset-0 z-0 opacity-60">
+                <div className="absolute inset-0 z-0 opacity-40">
                     <VantaFog />
                 </div>
             )}
 
             {/* Depleted Shadow Overlay - Only in OFF State */}
-            <div className={`absolute inset-0 transition-opacity duration-2000 ${!environmentalMode ? 'opacity-60' : 'opacity-0'} bg-black/20`} />
+            {!environmentalMode && (
+                <div className="absolute inset-0 transition-opacity duration-2000 opacity-60 bg-black/20" />
+            )}
 
             <Canvas camera={{ position: [0, 0, 5] }}>
                 <ambientLight intensity={environmentalMode ? (isDarkMode ? 0.8 : 1.2) : 0.3} />

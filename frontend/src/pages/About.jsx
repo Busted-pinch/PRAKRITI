@@ -30,9 +30,9 @@ const About = () => {
                     <div className="text-center mb-20">
                         <h1 className={`text-4xl md:text-6xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                             We Exist to Rebuild the <br />
-                            <span className="text-emerald-500">Human–Environment Connection.</span>
+                            <span className={`${isDarkMode ? 'text-emerald-400' : 'text-teal-700'}`}>Human–Environment Connection.</span>
                         </h1>
-                        <p className={`text-xl leading-relaxed max-w-2xl mx-auto ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        <p className={`text-xl leading-relaxed max-w-2xl mx-auto ${isDarkMode ? 'text-gray-400' : 'text-gray-700'}`}>
                             In an increasingly digital world, we spend more time interacting with screens than with the physical world around us. Prakriti exists to change that.
                         </p>
                     </div>
@@ -62,10 +62,10 @@ const About = () => {
                     <div className="mb-20">
                         <h2 className={`text-3xl font-bold mb-8 text-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Our Values</h2>
                         <div className="grid md:grid-cols-2 gap-6">
-                            <ValueCard title="Clarity Over Noise" desc="We simplify complexity without distorting truth." icon={<Zap className="text-amber-400" />} />
-                            <ValueCard title="Intelligence With Empathy" desc="Technology should adapt to humans, not the other way around." icon={<Heart className="text-rose-400" />} />
-                            <ValueCard title="Action Over Alarm" desc="Awareness matters only when it leads to change." icon={<Users className="text-blue-400" />} />
-                            <ValueCard title="Credibility First" desc="We rely on trusted, verified environmental data sources." icon={<Shield className="text-emerald-400" />} />
+                            <ValueCard title="Clarity Over Noise" desc="We simplify complexity without distorting truth." icon={<Zap />} color="text-amber-600" darkColor="text-amber-400" />
+                            <ValueCard title="Intelligence With Empathy" desc="Technology should adapt to humans, not the other way around." icon={<Heart />} color="text-rose-600" darkColor="text-rose-400" />
+                            <ValueCard title="Action Over Alarm" desc="Awareness matters only when it leads to change." icon={<Users />} color="text-blue-600" darkColor="text-blue-400" />
+                            <ValueCard title="Credibility First" desc="We rely on trusted, verified environmental data sources." icon={<Shield />} color="text-emerald-600" darkColor="text-emerald-400" />
                         </div>
                     </div>
 
@@ -86,12 +86,12 @@ const About = () => {
     );
 };
 
-const ValueCard = ({ title, desc, icon }) => {
+const ValueCard = ({ title, desc, icon, color = 'text-emerald-600', darkColor = 'text-emerald-400' }) => {
     const { isDarkMode } = useTheme();
     return (
         <GlassCard className="p-6 flex items-start gap-4">
-            <div className={`p-3 rounded-xl ${isDarkMode ? 'bg-white/10' : 'bg-gray-100'}`}>
-                {React.cloneElement(icon, { className: 'w-6 h-6' })}
+            <div className={`p-3 rounded-xl ${isDarkMode ? 'bg-white/10' : 'bg-white/80'}`}>
+                {React.cloneElement(icon, { className: `w-6 h-6 ${isDarkMode ? darkColor : color}` })}
             </div>
             <div>
                 <h3 className={`font-bold text-lg mb-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{title}</h3>

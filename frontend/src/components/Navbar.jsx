@@ -83,9 +83,15 @@ const Navbar = () => {
 
                         {user ? (
                             <div className="flex items-center gap-4">
-                                <div className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                    Hi, {user.full_name?.split(' ')[0] || 'User'}
-                                </div>
+                                <Link
+                                    to="/profile"
+                                    className={`text-sm font-medium transition-colors hover:text-emerald-500 ${location.pathname === '/profile'
+                                        ? 'text-emerald-500'
+                                        : isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                                        }`}
+                                >
+                                    Profile
+                                </Link>
                                 <button
                                     onClick={handleLogout}
                                     className={`px-4 py-2 rounded-full text-sm font-medium transition-all border ${isDarkMode
