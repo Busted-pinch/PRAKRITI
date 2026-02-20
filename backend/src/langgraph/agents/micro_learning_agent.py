@@ -1,57 +1,114 @@
 from typing import Dict, Any
 from langchain_core.messages import AIMessage, SystemMessage, HumanMessage
 from src.langgraph.state import UnifiedState
-from src.core.aggregate_data import Datastore
 from src.llm.gemini import get_gemini_llm
-from loguru import logger
 
-async def micro_learning_agent(state: UnifiedState, datastore: Datastore) -> Dict[str, Any]:
-    """
-    Agent responsible for delivering micro-learning content using LLM.
-    """
-    logger.info("Micro Learning Agent: Started generation")
-    user_id = state.get("user_id")
-    user_info = None
-    if user_id:
-        try:
-             user_info = datastore.get_user(user_id)
-             logger.debug(f"Micro Learning: Fetched user info for {user_id}")
-        except Exception as e:
-             logger.warning(f"Micro Learning: Failed to fetch user info: {e}")
-             pass
-    
+
+async def micro_learning_agent(state: UnifiedState, datastore: Any) -> Dict[str, Any]:
+
+    structured = state.get("structured_data", {})
+
+    twin = structured.get("twin_state", {})
+    environment = structured.get("environment", {})
+    behavior_profile = structured.get("behavior_profile", {})
+    counterfactual = structured.get("counterfactual_simulation")
+
+    risk_level = twin.get("risk_category")
+    primary_driver = twin.get("primary_risk_driver")
+    projection = twin.get("projection_7d", [])
+    conflict = twin.get("behavior_environment_conflict", {})
+    interest_vector = behavior_profile.get("interest_vector", {})
+
     llm = get_gemini_llm()
-    
+
     if not llm:
-        logger.warning("Micro Learning: LLM unavailable, returning static content")
-        topic = "Sustainability"
-        content = "Tip: Reduce, Reuse, Recycle."
         return {
-            "structured_data": {"learning_content": {"topic": topic, "content": content}},
-             "messages": [AIMessage(content=content)]
+            "messages": [
+                AIMessage(content="Environmental awareness tip unavailable.")
+            ]
         }
 
-    system_prompt = "You are a helpful environmental educator. Generate a short, engaging micro-learning fact or tip."
-    human_prompt = (
-        f"User Preferences: {user_info.home_location if user_info else 'General'}\n"
-        "Generate a tip under 2 sentences. Make it actionable."
-    )
-    
-    try:
-        logger.info("Micro Learning: Invoking LLM")
-        response = await llm.ainvoke([
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=human_prompt)
-        ])
-        logger.info("Micro Learning: LLM response received")
-        return {
-            "structured_data": {"learning_content": {"generated": True}},
-            "messages": [response]
-        }
-    except Exception as e:
-         logger.error(f"Micro Learning Error: {e}")
-         return {
-            "structured_data": {"error": str(e)},
-            "messages": [AIMessage(content="Error generating learning content.")]
-        }
+    # ---------------------------------------
+    # Determine Tone Based on Risk
+    # ---------------------------------------
 
+    if risk_level == "high":
+        tone = "urgent but calm"
+    elif risk_level == "moderate":
+        tone = "advisory and preventive"
+    else:
+        tone = "encouraging and reinforcing"
+
+    # ---------------------------------------
+    # Determine Interest Focus
+    # ---------------------------------------
+
+    if interest_vector:
+        top_interest = max(interest_vector, key=interest_vector.get)
+    else:
+        top_interest = "general sustainability"
+
+    # ---------------------------------------
+    # Trend Awareness
+    # ---------------------------------------
+
+    trend_direction = "stable"
+
+    if len(projection) >= 2:
+        if projection[-1] > projection[0]:
+            trend_direction = "worsening"
+        elif projection[-1] < projection[0]:
+            trend_direction = "improving"
+
+    # ---------------------------------------
+    # Conflict Awareness
+    # ---------------------------------------
+
+    conflict_text = ""
+    if conflict.get("conflict"):
+        conflict_text = f"There is a behavioral-environment mismatch: {conflict.get('reason')}."
+
+    # ---------------------------------------
+    # Counterfactual Awareness
+    # ---------------------------------------
+
+    counterfactual_text = ""
+    if counterfactual:
+        counterfactual_text = f"Simulation result: {counterfactual}"
+
+    # ---------------------------------------
+    # Build LLM Prompt
+    # ---------------------------------------
+
+    system_prompt = f"""
+    You are an adaptive environmental educator.
+
+    Tone: {tone}
+    Risk Level: {risk_level}
+    Primary Risk Driver: {primary_driver}
+    Trend Direction: {trend_direction}
+    Top User Interest: {top_interest}
+
+    {conflict_text}
+    {counterfactual_text}
+
+    Generate:
+    1. One short educational insight (max 2 sentences)
+    2. One practical action aligned with user's interests
+    3. Reinforce long-term behavior improvement
+    """
+
+    response = await llm.ainvoke([
+        SystemMessage(content=system_prompt)
+    ])
+
+    return {
+        "structured_data": {
+            "microlearning": {
+                "risk_level": risk_level,
+                "driver": primary_driver,
+                "interest_focus": top_interest
+            }
+        },
+        "messages": [response]
+    }

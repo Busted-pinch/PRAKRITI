@@ -128,7 +128,9 @@ async def websocket_endpoint(websocket: WebSocket, token: str = None):
             initial_state = {
                 "messages": [HumanMessage(content=content)],
                 "user_id": user_id,
-                "structured_data": {}
+                "structured_data": {},
+                "lat": message_data.get("lat"),
+                "lon": message_data.get("lon")
             }
             
             # 5. Stream Graph Execution

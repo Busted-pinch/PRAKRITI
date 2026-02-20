@@ -1,8 +1,7 @@
+import asyncio
 from fastapi import APIRouter, Depends
-from typing import Optional
-from datetime import datetime
 from src.api.deps import get_current_user
-from src.core.supabase_client import supabase
+from src.core.aggregate_data import AggregateData
 from src.core.open_meteo_client import fetch_weather, fetch_air_quality
 from src.api.environment.utils import parse_hourly
 from src.core.aggregate_data import Datastore
@@ -12,61 +11,70 @@ router = APIRouter(dependencies=[Depends(get_current_user)])
 store = Datastore()
 
 # ---------------------------------------
-# CURRENT ENVIRONMENT
+# CURRENT ENVIRONMENT (Unified)
 # ---------------------------------------
 
 @router.get("/current")
 async def get_current_environment(lat: float, lon: float):
+    logger.debug(f"[Environment API - Current] Fetching environment for lat={lat}, lon={lon}")
 
-    weather = await fetch_weather(lat, lon)
-    air = await fetch_air_quality(lat, lon)
+    env_data = await datastore.get_environment_snapshot(lat, lon)
 
-    current_weather = weather.get("current", {})
-    hourly_air = air.get("hourly", {})
+    if not env_data:
+        return {"error": "Unable to fetch environment data"}
 
-    return {
-        "temperature": current_weather.get("temperature_2m"),
-        "apparent_temperature": current_weather.get("apparent_temperature"),
-        "humidity": current_weather.get("relative_humidity_2m"),
-        "wind_speed": current_weather.get("wind_speed_10m"),
-        "uv_index": current_weather.get("uv_index"),
-        "pm2_5": hourly_air.get("pm2_5", [None])[0],
-        "pm10": hourly_air.get("pm10", [None])[0],
-        "ozone": hourly_air.get("ozone", [None])[0],
-        "nitrogen_dioxide": hourly_air.get("nitrogen_dioxide", [None])[0],
-    }
+    # Include session_id to satisfy Pydantic models or frontend expectations if necessary
+    env_data["session_id"] = "rest_api"
+    logger.debug(f"[Environment API - Current] Returning snapshot data: {env_data}")
+    return env_data
+
 
 # ---------------------------------------
-# HOURLY FORECAST
+# HOURLY / FORECAST (Unified)
 # ---------------------------------------
 
 @router.get("/hourly")
 async def get_hourly_forecast(lat: float, lon: float):
+    logger.debug(f"[Environment API - Hourly] Fetching forecast for lat={lat}, lon={lon}")
 
-    weather = await fetch_weather(lat, lon)
-    hourly = weather.get("hourly", {})
-    time = hourly.get("time", [])
+    weather, air = await asyncio.gather(
+        fetch_weather(lat, lon),
+        fetch_air_quality(lat, lon)
+    )
 
-    result = []
+    if not weather or not air:
+        return {"error": "Unable to fetch forecast"}
 
-    for i in range(len(time)):
-        result.append({
-            "time": time[i],
-            "temperature": hourly.get("temperature_2m", [None])[i],
-            "humidity": hourly.get("relative_humidity_2m", [None])[i],
-            "wind_speed": hourly.get("wind_speed_10m", [None])[i],
-            "precipitation": hourly.get("precipitation", [None])[i],
-            "uv_index": hourly.get("uv_index", [None])[i],
-        })
+    forecast_trajectory = []
+    if "hourly" in air and "pm2_5" in air["hourly"]:
+        pm25_list = air["hourly"].get("pm2_5", [])[:24]
+        temp_list = weather.get("hourly", {}).get("temperature_2m", [])[:24]
+        time_list = weather.get("hourly", {}).get("time", [])[:24]
+        
+        for t, pm, temp in zip(time_list, pm25_list, temp_list):
+            forecast_trajectory.append({
+                "time": t,
+                "pm2_5": pm,
+                "temperature": temp
+            })
 
-    return result
+    res = {
+        "forecast_daily_avg": {},
+        "forecast_trajectory": forecast_trajectory
+    }
+    logger.debug(f"[Environment API - Hourly] Returning forecast with {len(forecast_trajectory)} hours of data")
+    return res
+
 
 # ---------------------------------------
-# TREND FROM DATABASE (JSON FIXED)
+# TREND (DB Only)
 # ---------------------------------------
 
 @router.get("/trend")
 async def get_environment_trend(days: int = 7):
+    logger.debug(f"[Environment API - Trend] Fetching environment trend for past {days} days")
+
+    from src.core.supabase_client import supabase
 
     response = supabase.table("environmental_readings") \
         .select("readings") \
@@ -76,7 +84,7 @@ async def get_environment_trend(days: int = 7):
 
     values = []
 
-    for row in response.data:
+    for row in response.data or []:
         val = row["readings"].get("value")
         if val is not None:
             values.append(float(val))
@@ -88,12 +96,15 @@ async def get_environment_trend(days: int = 7):
         "trend": "improving" if avg < 50 else "worsening"
     }
 
+
 # ---------------------------------------
-# EXPOSURE (JSON FIXED)
+# EXPOSURE (DB Only)
 # ---------------------------------------
 
 @router.get("/exposure")
 async def get_exposure_history(start: str, end: str):
+
+    from src.core.supabase_client import supabase
 
     response = supabase.table("environmental_readings") \
         .select("readings") \
@@ -105,17 +116,19 @@ async def get_exposure_history(start: str, end: str):
 
     values = []
 
-    for row in response.data:
+    for row in response.data or []:
         val = row["readings"].get("value")
         if val is not None:
             values.append(float(val))
 
     cumulative = sum(values)
 
-    return {
+    res = {
         "cumulative_exposure": cumulative,
         "risk_score": cumulative / 100 if cumulative else 0
     }
+    logger.debug(f"[Environment API - Exposure] Returning exposure: {res}")
+    return res
 
 # ---------------------------------------
 # COLLECT AND STORE
@@ -124,15 +137,16 @@ async def get_exposure_history(start: str, end: str):
 @router.post("/collect")
 async def collect_environment(session_id: str, lat: float, lon: float):
 
-    weather = await fetch_weather(lat, lon)
-    air = await fetch_air_quality(lat, lon)
+    weather, air = await asyncio.gather(
+        fetch_weather(lat, lon),
+        fetch_air_quality(lat, lon)
+    )
 
     weather_rows = parse_hourly(weather, lat, lon, "open-meteo-weather", True)
     air_rows = parse_hourly(air, lat, lon, "open-meteo-air", True)
 
     all_rows = weather_rows + air_rows
 
-    # Chunk insert to avoid Supabase overload
     def chunk(data, size=500):
         for i in range(0, len(data), size):
             yield data[i:i + size]
@@ -140,7 +154,9 @@ async def collect_environment(session_id: str, lat: float, lon: float):
     for batch in chunk(all_rows):
         supabase.table("environmental_readings").insert(batch).execute()
 
-    return {
+    res = {
         "status": "stored",
         "records_inserted": len(all_rows)
     }
+    logger.debug(f"[Environment API - Collect] Storage completed: {res}")
+    return res

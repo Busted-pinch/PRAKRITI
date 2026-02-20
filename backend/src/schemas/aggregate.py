@@ -42,12 +42,16 @@ class EnvironmentData(BaseModel):
     precipitation: Optional[float] = None
     visibility: Optional[float] = None
 
-    # Air Quality
+    # Air Quality (Current Snapshot)
     pm2_5: Optional[float] = None
     pm10: Optional[float] = None
     ozone: Optional[float] = None
     nitrogen_dioxide: Optional[float] = None
     carbon_monoxide: Optional[float] = None
+
+    # Forecast Extensions
+    forecast_daily_avg: Optional[dict] = None
+    forecast_trajectory: Optional[list] = None
 
     # Forecast flag
     is_forecast: Optional[bool] = False

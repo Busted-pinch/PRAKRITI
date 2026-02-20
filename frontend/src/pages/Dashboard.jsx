@@ -52,9 +52,26 @@ const Dashboard = () => {
         const fetchDashboardData = async () => {
             try {
                 setLoading(true);
+                let lat = 28.6139;
+                let lon = 77.2090;
+                let locationString = "New Delhi, Delhi";
+                try {
+                    const locationRes = await fetch('https://ipapi.co/json/');
+                    const locationData = await locationRes.json();
+                    if (locationData && locationData.latitude && locationData.longitude) {
+                        lat = locationData.latitude;
+                        lon = locationData.longitude;
+                        if (locationData.city) {
+                            locationString = `${locationData.city}, ${locationData.region || locationData.country_name}`;
+                        }
+                    }
+                } catch (e) {
+                    console.log("Could not fetch IP location, falling back to default.", e);
+                }
+
                 const [profileRes, envRes] = await Promise.allSettled([
                     api.get('/user/profile'),
-                    api.get('/environment/current?lat=28.6139&lon=77.2090')
+                    api.get(`/environment/current?lat=${lat}&lon=${lon}`)
                 ]);
 
                 let profileData = null;
@@ -67,7 +84,7 @@ const Dashboard = () => {
                     envData = envRes.value.data;
                 }
 
-                if (!profileData?.persona) {
+                if (!profileData) {
                     navigate('/assessment');
                     return;
                 }
@@ -77,10 +94,18 @@ const Dashboard = () => {
                 const sensitivity = profileData?.constraints?.aqi_sensitivity || 'med';
                 const tolerance = calculateAQITolerance(sensitivity);
 
+                let energyDesc = "Optimal";
+                if (aqiValue > tolerance) energyDesc = "Draining";
+                else if (aqiValue > tolerance - 20) energyDesc = "Moderate";
+
                 setUserData({
                     userName: profileData?.name || "Traveler",
                     persona,
+                    locationName: locationString,
                     currentAQI: aqiValue,
+                    temperature: envData?.temperature || 24,
+                    humidity: envData?.humidity || 65,
+                    energyText: energyDesc
                 });
             } catch (e) {
                 console.error(e);
@@ -112,6 +137,10 @@ const Dashboard = () => {
                         <h1 className="text-3xl font-bold flex items-center gap-2">
                             Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500">{userData.userName}</span>
                         </h1>
+                        <p className={`flex items-center gap-2 mt-2 font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            <Map className="w-4 h-4" />
+                            {userData.locationName}
+                        </p>
                     </div>
 
                     {/* Environmental Mode Toggle */}
@@ -148,7 +177,7 @@ const Dashboard = () => {
                         </div>
                         <div>
                             <div className={`text-xs uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Temp</div>
-                            <div className="font-bold text-lg">24°C</div>
+                            <div className="font-bold text-lg">{userData.temperature}°C</div>
                         </div>
                     </GlassCard>
                     <GlassCard className="p-4 flex items-center gap-3" hoverEffect={false}>
@@ -157,7 +186,7 @@ const Dashboard = () => {
                         </div>
                         <div>
                             <div className={`text-xs uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Humidity</div>
-                            <div className="font-bold text-lg">65%</div>
+                            <div className="font-bold text-lg">{userData.humidity}%</div>
                         </div>
                     </GlassCard>
                     <GlassCard className="p-4 flex items-center gap-3" hoverEffect={false}>
@@ -166,7 +195,7 @@ const Dashboard = () => {
                         </div>
                         <div>
                             <div className={`text-xs uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Energy</div>
-                            <div className="font-bold text-lg">Optimal</div>
+                            <div className="font-bold text-lg">{userData.energyText}</div>
                         </div>
                     </GlassCard>
                 </div>

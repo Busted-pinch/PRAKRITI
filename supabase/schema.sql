@@ -1,183 +1,210 @@
--- Enable necessary extensions
+-- =====================================================
+-- EXTENSIONS
+-- =====================================================
+
 create extension if not exists "uuid-ossp";
 
--- PROFILES
-create table if not exists public.profiles (
-  id uuid references auth.users on delete cascade primary key,
-  email text,
-  full_name text,
-  avatar_url text,
-  bio text,
-  preferences jsonb default '{}'::jsonb,
-  settings jsonb default '{}'::jsonb,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
+-- =====================================================
+-- PROFILES (linked to auth.users)
+-- =====================================================
+
+create table if not exists profiles (
+    id uuid primary key references auth.users(id) on delete cascade,
+    full_name text,
+    avatar_url text,
+    created_at timestamp with time zone default now(),
+    updated_at timestamp with time zone default now()
 );
 
--- DIGITAL TWINS
-create table if not exists public.digital_twins (
-  id uuid references public.profiles(id) on delete cascade primary key,
-  health_metrics jsonb default '{}'::jsonb,
-  avatar_state jsonb default '{}'::jsonb,
-  last_synced_at timestamptz default now()
-);
-
--- SIMULATIONS
-create table if not exists public.simulations (
-  id uuid default uuid_generate_v4() primary key,
-  user_id uuid references public.profiles(id),
-  parameters jsonb default '{}'::jsonb,
-  results jsonb default '{}'::jsonb,
-  executed_at timestamptz default now()
-);
-
--- ENVIRONMENTAL READINGS
-create table if not exists public.environmental_readings (
-  id uuid default uuid_generate_v4() primary key,
-  location jsonb,
-  data_type text not null,
-  readings jsonb not null,
-  source text,
-  recorded_at timestamptz default now(),
-  is_forecast boolean default false
-);
-
--- Indexes for performance
-create index if not exists idx_env_data_type
-on public.environmental_readings (data_type);
-
-create index if not exists idx_env_recorded_at
-on public.environmental_readings (recorded_at);
-
-create index if not exists idx_env_lat
-on public.environmental_readings ((location->>'lat'));
-
-create index if not exists idx_env_lon
-on public.environmental_readings ((location->>'long'));
-
-create index if not exists idx_env_value
-on public.environmental_readings ((readings->>'value'));
-
-create index if not exists idx_env_forecast
-on public.environmental_readings (is_forecast);
-
--- CHAT SESSIONS
-create table if not exists public.chat_sessions (
-  id uuid default uuid_generate_v4() primary key,
-  user_id uuid references public.profiles(id),
-  title text,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
-);
-
--- CHAT MESSAGES
-create table if not exists public.chat_messages (
-  id uuid default uuid_generate_v4() primary key,
-  session_id uuid references public.chat_sessions(id) on delete cascade not null,
-  role text not null,
-  content text not null,
-  metadata jsonb default '{}'::jsonb,
-  created_at timestamptz default now()
-);
-
--- USER ACTIVITIES (FIXED COMMA BUG)
-create table if not exists public.user_activities (
-  id uuid default uuid_generate_v4() primary key,
-  user_id uuid references public.profiles(id),
-  activity_type text not null,
-  points_earned int default 0,
-  metadata jsonb default '{}'::jsonb,
-  completed_at timestamptz default now()
-);
-
--- Enable RLS
-alter table public.profiles enable row level security;
-alter table public.digital_twins enable row level security;
-alter table public.simulations enable row level security;
-alter table public.environmental_readings enable row level security;
-alter table public.chat_sessions enable row level security;
-alter table public.chat_messages enable row level security;
-alter table public.user_activities enable row level security;
-
--- RLS Policies
-create policy "Users can view own profile"
-on public.profiles for select
-using (auth.uid() = id);
-
-create policy "Users can update own profile"
-on public.profiles for update
-using (auth.uid() = id);
-
-create policy "Users can view own twin"
-on public.digital_twins for select
-using (auth.uid() = id);
-
-create policy "Users can update own twin"
-on public.digital_twins for update
-using (auth.uid() = id);
-
-create policy "Users can view own simulations"
-on public.simulations for select
-using (auth.uid() = user_id);
-
-create policy "Users can create own simulations"
-on public.simulations for insert
-with check (auth.uid() = user_id);
-
-create policy "Users can view own chat sessions"
-on public.chat_sessions for select
-using (auth.uid() = user_id);
-
-create policy "Users can create own chat sessions"
-on public.chat_sessions for insert
-with check (auth.uid() = user_id);
-
-create policy "Users can view own chat messages"
-on public.chat_messages for select
-using (
-  exists (
-    select 1 from public.chat_sessions s
-    where s.id = session_id and s.user_id = auth.uid()
-  )
-);
-
-create policy "Users can create own chat messages"
-on public.chat_messages for insert
-with check (
-  exists (
-    select 1 from public.chat_sessions s
-    where s.id = session_id and s.user_id = auth.uid()
-  )
-);
-
-create policy "Public read environmental data"
-on public.environmental_readings for select
-using (true);
-
-create policy "Users can view own activities"
-on public.user_activities for select
-using (auth.uid() = user_id);
-
--- Auto-create profile & twin
-create or replace function public.handle_new_user()
+-- Auto-update updated_at
+create or replace function update_updated_at()
 returns trigger as $$
 begin
-  insert into public.profiles (id, email, full_name, avatar_url)
-  values (
-    new.id,
-    new.email,
-    new.raw_user_meta_data->>'full_name',
-    new.raw_user_meta_data->>'avatar_url'
-  );
+    new.updated_at = now();
+    return new;
+end;
+$$ language plpgsql;
 
-  insert into public.digital_twins (id)
-  values (new.id);
+create trigger profiles_updated_at
+before update on profiles
+for each row
+execute function update_updated_at();
 
+
+-- =====================================================
+-- BEHAVIOR PROFILES
+-- =====================================================
+
+create table if not exists behavior_profiles (
+    id uuid primary key default uuid_generate_v4(),
+    user_id uuid unique references auth.users(id) on delete cascade,
+    behavior_model jsonb not null,
+    mbti text not null,
+    selected_interests jsonb,
+    hobbies jsonb,
+    diseases jsonb,
+    constraints jsonb,
+    created_at timestamp with time zone default now(),
+    updated_at timestamp with time zone default now()
+);
+
+create trigger behavior_profiles_updated_at
+before update on behavior_profiles
+for each row
+execute function update_updated_at();
+
+create index if not exists idx_behavior_user
+on behavior_profiles(user_id);
+
+
+-- =====================================================
+-- ENVIRONMENTAL READINGS (Historical Storage)
+-- =====================================================
+
+create table if not exists environmental_readings (
+    id uuid primary key default uuid_generate_v4(),
+    location jsonb not null,
+    data_type text not null,
+    readings jsonb not null,
+    source text,
+    recorded_at timestamp with time zone not null,
+    is_forecast boolean default false,
+    created_at timestamp with time zone default now()
+);
+
+create index if not exists idx_env_recorded_at
+on environmental_readings(recorded_at);
+
+create index if not exists idx_env_type
+on environmental_readings(data_type);
+
+
+-- =====================================================
+-- USER ENVIRONMENT SESSIONS (Exposure Snapshots)
+-- =====================================================
+
+create table if not exists user_environment_sessions (
+    id uuid primary key default uuid_generate_v4(),
+    user_id uuid references auth.users(id) on delete cascade,
+    session_id text,
+    lat float,
+    lon float,
+    temperature float,
+    humidity float,
+    wind_speed float,
+    pm2_5 float,
+    pm10 float,
+    ozone float,
+    nitrogen_dioxide float,
+    aqi float,
+    recorded_at timestamp with time zone default now()
+);
+
+create index if not exists idx_user_env_user
+on user_environment_sessions(user_id);
+
+create index if not exists idx_user_env_time
+on user_environment_sessions(recorded_at);
+
+
+-- =====================================================
+-- USER ACTIVITY LOGS (Behavior-Exposure Link)
+-- =====================================================
+
+create table if not exists user_activity_logs (
+    id uuid primary key default uuid_generate_v4(),
+    user_id uuid references auth.users(id) on delete cascade,
+    outdoor_minutes int,
+    activity_intensity text check (activity_intensity in ('low','moderate','high')),
+    recorded_at timestamp with time zone default now()
+);
+
+create index if not exists idx_activity_user
+on user_activity_logs(user_id);
+
+create index if not exists idx_activity_time
+on user_activity_logs(recorded_at);
+
+
+-- =====================================================
+-- DIGITAL TWIN STATE (Core Twin Persistence)
+-- =====================================================
+
+create table if not exists digital_twin_state (
+    user_id uuid primary key references auth.users(id) on delete cascade,
+    current_risk float,
+    risk_category text,
+    risk_components jsonb,
+    exposure_7d_avg_pm2_5 float,
+    trend_slope float,
+    projection_7d jsonb,
+    mitigation_plan jsonb,
+    last_activity jsonb,
+    last_environment jsonb,
+    updated_at timestamp with time zone default now()
+);
+
+create index if not exists idx_twin_updated
+on digital_twin_state(updated_at);
+
+
+-- =====================================================
+-- ROW LEVEL SECURITY (RLS)
+-- =====================================================
+
+alter table profiles enable row level security;
+alter table behavior_profiles enable row level security;
+alter table user_environment_sessions enable row level security;
+alter table user_activity_logs enable row level security;
+alter table digital_twin_state enable row level security;
+
+-- Users can only access their own records
+
+create policy "Users can view own profile"
+on profiles
+for select using (auth.uid() = id);
+
+create policy "Users can update own profile"
+on profiles
+for update using (auth.uid() = id);
+
+create policy "Users can manage own behavior"
+on behavior_profiles
+for all using (auth.uid() = user_id);
+
+create policy "Users can view own environment sessions"
+on user_environment_sessions
+for select using (auth.uid() = user_id);
+
+create policy "Users can insert own environment sessions"
+on user_environment_sessions
+for insert with check (auth.uid() = user_id);
+
+create policy "Users can manage own activity logs"
+on user_activity_logs
+for all using (auth.uid() = user_id);
+
+create policy "Users can view own twin state"
+on digital_twin_state
+for select using (auth.uid() = user_id);
+
+create policy "Users can update own twin state"
+on digital_twin_state
+for update using (auth.uid() = user_id);
+
+
+-- =====================================================
+-- AUTO PROFILE CREATION TRIGGER
+-- =====================================================
+
+create or replace function handle_new_user()
+returns trigger as $$
+begin
+  insert into profiles (id, full_name)
+  values (new.id, new.raw_user_meta_data->>'full_name');
   return new;
 end;
 $$ language plpgsql security definer;
-
-drop trigger if exists on_auth_user_created on auth.users;
 
 create trigger on_auth_user_created
 after insert on auth.users

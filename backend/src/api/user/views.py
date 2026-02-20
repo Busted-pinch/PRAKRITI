@@ -3,11 +3,14 @@ from typing import Dict
 from .schemas import ProfileUpdate, TwinUpdate, SettingsUpdate, OnboardingPayload, UserProfile, Persona, Trait, Constraints
 from src.api.deps import get_current_user
 
-router = APIRouter()
+from datetime import datetime
+from src.core.aggregate_data import AggregateData
+from src.core.logger import logger
 
-# --- MOCK DATABASE (In-Memory for Demo) ---
-# In a real app, this would be in Supabase
-USER_DB: Dict[str, dict] = {}
+router = APIRouter()
+store = AggregateData()
+
+# ... (keep calculate_persona and calculate_traits helper functions as is) ...
 
 def calculate_persona(constraints: Constraints) -> Persona:
     intensity = constraints.max_physical_intensity
@@ -21,16 +24,41 @@ def calculate_persona(constraints: Constraints) -> Persona:
         return Persona(name="Urban Zen Master", desc="Mindful and selective, thriving in controlled environments.")
     return Persona(name="River Wanderer", desc="Adaptable and flowing, balanced in energy and sensitivity.")
 
-def calculate_traits(answers) -> list[Trait]:
-    # Default dummy calculation logic mirroring frontend
-    return [
-        Trait(subject='Resilience', A=120, fullMark=150),
-        Trait(subject='Adaptability', A=98, fullMark=150),
-        Trait(subject='Empathy', A=86, fullMark=150),
-        Trait(subject='Awareness', A=99, fullMark=150),
-        Trait(subject='Energy', A=85, fullMark=150),
-        Trait(subject='Curiosity', A=65, fullMark=150),
-    ]
+def calculate_traits(answers: list[int]) -> list[Trait]:
+    # Mapping of question indices (0-9) to trait classes they affect.
+    # We assign different weights or direct mapping based on user's Likert answers (1-5).
+    trait_mapping = {
+        "Resilience": [0, 8],     # Q1, Q9
+        "Adaptability": [1, 5],   # Q2, Q6
+        "Empathy": [2, 7],        # Q3, Q8
+        "Awareness": [3, 9],      # Q4, Q10
+        "Energy": [4, 6],         # Q5, Q7
+        "Curiosity": [1, 3, 7]    # Mixed signals
+    }
+    
+    # Calculate raw scores
+    raw_scores = {trait: 0 for trait in trait_mapping}
+    max_raw_scores = {trait: 0 for trait in trait_mapping}
+    
+    for trait, indices in trait_mapping.items():
+        for idx in indices:
+            if idx < len(answers) and answers[idx] is not None:
+                raw_scores[trait] += answers[idx]
+            else:
+                raw_scores[trait] += 3 # default neutral
+            # Since answers are 1-5
+            max_raw_scores[trait] += 5
+
+    # Normalize to a fullMark of 150 (frontend radar chart expectation)
+    final_traits = []
+    full_mark = 150
+    for trait in trait_mapping.keys():
+        # Protect against division by zero just in case
+        max_possible = max_raw_scores[trait] if max_raw_scores[trait] > 0 else 1
+        normalized_score = int((raw_scores[trait] / max_possible) * full_mark)
+        final_traits.append(Trait(subject=trait, A=normalized_score, fullMark=full_mark))
+        
+    return final_traits
 
 @router.post("/onboarding")
 async def onboarding(payload: OnboardingPayload, current_user = Depends(get_current_user)):
@@ -44,25 +72,51 @@ async def onboarding(payload: OnboardingPayload, current_user = Depends(get_curr
         email = current_user.get("email", "user@example.com")
         user_metadata = current_user.get("user_metadata", {})
     
+    logger.debug(f"[User API - Onboarding] Request received for user {user_id}.")
+
     # Logic to process assessment
     persona = calculate_persona(payload.constraints)
     traits = calculate_traits(payload.answers)
     
-    # Store in Mock DB
-    USER_DB[user_id] = {
-        "id": user_id,
-        "email": email,
-        "name": user_metadata.get("full_name", "Traveler"),
-        "persona": persona.dict(),
-        "traits": [t.dict() for t in traits],
+    # Profile updates (name only usually)
+    existing_profile = store.get_user(user_id)
+    profile_updates = {"full_name": user_metadata.get("full_name", "Traveler")}
+    if existing_profile:
+        store.update_user(user_id, profile_updates)
+    else:
+        store.create_user({"id": user_id, **profile_updates})
+
+    # Behavior profile
+    behavior_data = {
+        "behavior_model": {
+            "persona": persona.dict(),
+            "traits": [t.dict() for t in traits],
+            "twin_status": "optimizing"
+        },
+        "mbti": persona.name, # Using persona name as placeholder for MBTI
+        "selected_interests": payload.selected_interests,
         "hobbies": payload.hobbies,
         "interests": payload.selected_interests,
         "diseases": payload.diseases,
         "constraints": payload.constraints.dict(),
-        "twin_status": "optimizing"
     }
+    
+    saved_behavior = store.upsert_behavior_profile(user_id, behavior_data)
 
-    return {"message": "Onboarding complete", "profile": USER_DB[user_id]}
+    user_profile = UserProfile(
+        id=user_id,
+        email=email,
+        name=profile_updates["full_name"],
+        persona=persona,
+        traits=traits,
+        hobbies=payload.hobbies,
+        interests=payload.selected_interests,
+        constraints=payload.constraints,
+        twin_status="optimizing"
+    )
+
+    logger.debug(f"[User API - Onboarding] Returning onboarding response for user {user_id}.")
+    return {"message": "Onboarding complete", "profile": user_profile.dict()}
 
 @router.get("/profile", response_model=UserProfile)
 async def get_profile(current_user = Depends(get_current_user)):
@@ -75,18 +129,46 @@ async def get_profile(current_user = Depends(get_current_user)):
         email = current_user.get("email", "user@example.com")
         user_metadata = current_user.get("user_metadata", {})
     
-    # Return from Mock DB or Default
-    profile = USER_DB.get(user_id)
-    if not profile:
-        # Return basic profile if no assessment done yet
-        return UserProfile(
-            id=user_id,
-            email=email,
-            name=user_metadata.get("full_name", "Traveler"),
-            hobbies=[],
-            interests=[]
-        )
-    return UserProfile(**profile)
+    # Return from DB
+    profile = store.get_user(user_id)
+    behavior = store.get_raw_behavior_profile(user_id)
+    
+    name = user_metadata.get("full_name", "Traveler")
+    
+    if profile and hasattr(profile, 'name') and profile.name:
+        name = profile.name
+        
+    hobbies = []
+    interests = []
+    persona = None
+    traits = None
+    constraints = None
+    twin_status = "healthy"
+    
+    if behavior:
+        hobbies = behavior.get("hobbies", [])
+        interests = behavior.get("selected_interests", [])
+        if behavior.get("constraints"):
+            constraints = Constraints(**behavior["constraints"])
+        behavior_model = behavior.get("behavior_model", {})
+        if behavior_model.get("persona"):
+            persona = Persona(**behavior_model["persona"])
+        if behavior_model.get("traits"):
+            traits = [Trait(**t) for t in behavior_model["traits"]]
+        twin_status = behavior_model.get("twin_status", "healthy")
+        
+    logger.debug(f"[User API - Profile] Returning constructed profile for {user_id}")
+    return UserProfile(
+        id=user_id,
+        email=email,
+        name=name,
+        hobbies=hobbies,
+        interests=interests,
+        persona=persona,
+        traits=traits,
+        constraints=constraints,
+        twin_status=twin_status
+    )
 
 @router.put("/profile")
 async def update_profile(data: ProfileUpdate, current_user = Depends(get_current_user)):
@@ -112,12 +194,23 @@ async def update_profile(data: ProfileUpdate, current_user = Depends(get_current
 @router.get("/twin")
 async def get_twin_state(current_user = Depends(get_current_user)):
     user_id = current_user.id if hasattr(current_user, 'id') else (current_user.get("sub") or current_user.get("id"))
-    profile = USER_DB.get(user_id)
-    status = profile.get("twin_status", "healthy") if profile else "healthy"
+    profile = store.get_user(user_id)
+    
+    status = "healthy"
+    if profile and hasattr(profile, "twin_status"):
+         status = profile.twin_status
+    elif profile and isinstance(profile, dict):
+         status = profile.get("twin_status", "healthy")
+
+    logger.debug(f"[User API - Twin] Returning status '{status}' for user {user_id}")
     return {"status": status, "risk_level": "low"}
 
 @router.put("/twin")
 async def update_twin_state(data: TwinUpdate):
+    # This endpoint didn't verify user in original code, but we probably should. 
+    # For now, keeping it simple or assuming it might be system called? 
+    # Actually, without user_id we can't update.
+    # The original code just returned the data.
     return {"message": "Twin updated", "data": data}
 
 @router.get("/settings")
