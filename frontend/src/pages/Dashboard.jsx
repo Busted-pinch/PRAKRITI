@@ -15,6 +15,8 @@ import NewsSection from '../components/NewsSection';
 import LawPolicySection from '../components/LawPolicySection';
 import NgoEvents from '../components/NgoEvents';
 import api from '../services/api';
+import ContextualBriefing from '../components/ContextualBriefing';
+import EmotionalUX from '../components/EmotionalUX';
 
 // --- Helper Functions ---
 const calculatePersona = (constraints) => {
@@ -306,6 +308,8 @@ const Dashboard = () => {
     const [userData, setUserData] = useState(null);
     const [envData, setEnvData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [dailyBriefing, setDailyBriefing] = useState(null);
+    const [emotionalInsight, setEmotionalInsight] = useState(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -329,9 +333,11 @@ const Dashboard = () => {
                     console.log("Could not fetch IP location, falling back to default.", e);
                 }
 
-                const [profileRes, envRes] = await Promise.allSettled([
+                const [profileRes, envRes, briefingRes, uxRes] = await Promise.allSettled([
                     api.get('/user/profile'),
-                    api.get(`/environment/current?lat=${lat}&lon=${lon}`)
+                    api.get(`/environment/current?lat=${lat}&lon=${lon}`),
+                    api.get(`/dashboard/daily-briefing?lat=${lat}&lon=${lon}`),
+                    api.get(`/dashboard/emotional-ux?lat=${lat}&lon=${lon}`)
                 ]);
 
                 let profileData = null;
@@ -342,6 +348,12 @@ const Dashboard = () => {
                 }
                 if (envRes.status === 'fulfilled') {
                     environment = envRes.value.data;
+                }
+                if (briefingRes?.status === 'fulfilled' && briefingRes.value?.data?.briefing) {
+                    setDailyBriefing(briefingRes.value.data.briefing);
+                }
+                if (uxRes?.status === 'fulfilled' && uxRes.value?.data?.insight) {
+                    setEmotionalInsight(uxRes.value.data.insight);
                 }
 
                 if (!profileData) {
@@ -438,7 +450,15 @@ const Dashboard = () => {
                     </button>
                 </div>
 
-                {/* Environmental Metrics Grid — always visible, independent of tabs */}
+                {/* AI Insight Cards — Daily Briefing + Emotional UX */}
+                {(dailyBriefing || emotionalInsight) && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <ContextualBriefing briefing={dailyBriefing} isDarkMode={isDarkMode} />
+                        <EmotionalUX insight={emotionalInsight} isDarkMode={isDarkMode} />
+                    </div>
+                )}
+
+                {/* Environmental Metrics Grid — always visible */}
                 <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-3 mb-6">
                     {metrics.map((m) => (
                         <MetricCard key={m.label} {...m} isDarkMode={isDarkMode} />
