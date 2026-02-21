@@ -92,26 +92,6 @@ const Questionnaire = () => {
         }
     };
 
-    const handleSkip = async () => {
-        const payload = {
-            answers: Array(10).fill(3),
-            diseases: [],
-            selected_interests: [],
-            hobbies: [],
-            constraints: {
-                max_physical_intensity: 'med',
-                aqi_sensitivity: 'med'
-            }
-        };
-
-        try {
-            await api.post('/user/onboarding', payload);
-            navigate('/dashboard', { state: { submission: payload } });
-        } catch (error) {
-            console.error("Failed to skip assessment:", error);
-            alert("Failed to skip assessment. Please try again.");
-        }
-    };
 
     const steps = [
         <IntroStep onNext={handleNext} />,
@@ -174,17 +154,6 @@ const Questionnaire = () => {
     return (
         <Layout>
             <div className="relative flex flex-col items-center justify-center min-h-[85vh] w-full">
-                {step < 6 && (
-                    <div className="absolute top-4 right-4 md:top-0 md:right-4 z-10 text-right w-full flex justify-end">
-                        <button
-                            onClick={handleSkip}
-                            className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${isDarkMode ? 'border-white/10 text-gray-400 hover:bg-white/5 hover:text-white' : 'border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-900'
-                                }`}
-                        >
-                            Skip / Do it later
-                        </button>
-                    </div>
-                )}
                 <div className="w-full max-w-5xl mx-auto mt-12 md:mt-16">
                     {/* Progress Bar (visible only on inner steps and not completion) */}
                     {step > 0 && step < 6 && (
