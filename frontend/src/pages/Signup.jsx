@@ -12,7 +12,7 @@ const Signup = () => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [successMsg, setSuccessMsg] = useState('');
-    const { signup, loading, error } = useAuth();
+    const { signup, login, loading, error } = useAuth();
     const navigate = useNavigate();
     const { isDarkMode } = useTheme();
 
@@ -20,10 +20,19 @@ const Signup = () => {
         e.preventDefault();
         const success = await signup(fullName, email, password);
         if (success) {
-            setSuccessMsg('Account created successfully! Redirecting to login...');
-            setTimeout(() => {
-                navigate('/login');
-            }, 2000);
+            // Auto login after signup
+            const loginResult = await login(email, password);
+            if (loginResult && loginResult.success) {
+                setSuccessMsg('Account created successfully! Redirecting...');
+                setTimeout(() => {
+                    navigate('/profile', { replace: true });
+                }, 1500);
+            } else {
+                setSuccessMsg('Account created successfully! Redirecting to login...');
+                setTimeout(() => {
+                    navigate('/login');
+                }, 2000);
+            }
         }
     };
 
