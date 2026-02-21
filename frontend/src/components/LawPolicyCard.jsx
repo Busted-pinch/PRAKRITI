@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useAnimation, motion, AnimatePresence } from 'framer-motion';
-import { Scale, FileText, Droplets, Wind, Leaf, Globe, Zap, ExternalLink } from 'lucide-react';
+import { Scale, Droplets, Wind, Leaf, Globe, ExternalLink } from 'lucide-react';
 
 /* ─── Category icon ──────────────────────────────────────────── */
 const getCategoryIcon = (category) => {
@@ -42,7 +42,7 @@ const defaultType = TYPE.national;
 
 /* ─── LawPolicyCard ──────────────────────────────────────────── */
 const LawPolicyCard = ({ law, isDarkMode }) => {
-    const [face, setFace] = useState(0);   // 0=Title, 1=Why, 2=Actions
+    const [face, setFace] = useState(0);   // 0=Title, 1=Why It Matters
     const [hovered, setHovered] = useState(false);
     const flipping = useRef(false);
     const controls = useAnimation();
@@ -54,7 +54,7 @@ const LawPolicyCard = ({ law, isDarkMode }) => {
         if (flipping.current) return;
         flipping.current = true;
         await controls.start({ rotateY: 90, transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } });
-        setFace(f => (f + 1) % 3);
+        setFace(f => (f + 1) % 2);
         controls.set({ rotateY: -90 });
         await controls.start({ rotateY: 0, transition: { duration: 0.2, ease: [0, 0, 0.6, 1] } });
         flipping.current = false;
@@ -170,7 +170,7 @@ const LawPolicyCard = ({ law, isDarkMode }) => {
                                             </span>
                                         )}
                                     </div>
-                                    <span className={`text-[10px] font-semibold tabular-nums ${subColor}`}>1 / 3</span>
+                                    <span className={`text-[10px] font-semibold tabular-nums ${subColor}`}>1 / 2</span>
                                 </div>
 
                                 <h3 className={`font-bold text-[15px] leading-snug mb-2 ${textColor}`}
@@ -199,71 +199,20 @@ const LawPolicyCard = ({ law, isDarkMode }) => {
                                     icon={<Globe />} label="Why It Matters to You"
                                     bgD={t.face1BgD} bgL={t.face1BgL}
                                     colD={t.face1D} colL={t.face1L}
-                                    counter="2 / 3"
+                                    counter="2 / 2"
                                 />
                                 <p className={`text-sm leading-relaxed overflow-y-auto flex-1 pr-0.5 ${textColor}`}>
                                     {law.why_it_matters_to_user || law.summary_simple || 'No personalised relevance available.'}
                                 </p>
                                 <p className={`text-[10px] mt-2 font-medium tracking-wide transition-opacity duration-300
                                     ${hovered ? 'opacity-100' : 'opacity-0'}
-                                    ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`}>
-                                    Tap for action steps →
-                                </p>
-                            </div>
-                        )}
-
-                        {/* ── Face 2: Actions + Source ── */}
-                        {face === 2 && (
-                            <div className="flex flex-col h-full">
-                                <FaceLabel
-                                    icon={<Zap />} label="What You Can Do"
-                                    bgD="bg-amber-500/20" bgL="bg-amber-50"
-                                    colD="text-amber-400" colL="text-amber-600"
-                                    counter="3 / 3"
-                                />
-
-                                {law.actionable_steps?.length > 0 ? (
-                                    <ul className="flex flex-col gap-2 overflow-y-auto flex-1 pr-0.5">
-                                        {law.actionable_steps.map((step, idx) => (
-                                            <motion.li
-                                                key={idx}
-                                                initial={{ opacity: 0, x: -6 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ delay: idx * 0.05, duration: 0.2 }}
-                                                className={`text-sm flex items-start gap-2 ${textColor}`}
-                                            >
-                                                <Zap className={`w-3 h-3 mt-[5px] flex-shrink-0
-                                                    ${isDarkMode ? 'text-amber-400' : 'text-amber-500'}`} />
-                                                {step}
-                                            </motion.li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <p className={`text-sm flex-1 ${bodyColor}`}>No action steps available.</p>
-                                )}
-
-                                {law.source && (
-                                    <a
-                                        href={law.source}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        onClick={e => e.stopPropagation()}
-                                        className={`mt-3 flex items-center justify-center gap-1.5 py-1.5 rounded-xl
-                                            text-xs font-medium transition-colors
-                                            ${isDarkMode ? 'bg-white/8 hover:bg-white/15 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
-                                    >
-                                        <ExternalLink className="w-3 h-3" />
-                                        Official Source
-                                    </a>
-                                )}
-
-                                <p className={`text-[10px] mt-1.5 font-medium tracking-wide transition-opacity duration-300
-                                    ${hovered ? 'opacity-100' : 'opacity-0'}
                                     ${isDarkMode ? t.colorD : t.colorL}`}>
                                     Tap to go back →
                                 </p>
                             </div>
                         )}
+
+
                     </motion.div>
                 </AnimatePresence>
             </motion.div>
