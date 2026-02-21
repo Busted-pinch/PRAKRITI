@@ -14,6 +14,7 @@ import Layout from '../components/Layout';
 import DailyInsight from '../components/DailyInsight';
 import NewsSection from '../components/NewsSection';
 import LawPolicySection from '../components/LawPolicySection';
+import NgoEvents from '../components/NgoEvents';
 import api from '../services/api';
 
 // --- Helper Functions ---
@@ -220,8 +221,13 @@ const Dashboard = () => {
                 </div>
 
                 {/* Laws & Agreements Full Width Section */}
-                <div className="mt-8">
+                <div className="mt-8 mb-8">
                     <LawPolicySection isDarkMode={isDarkMode} />
+                </div>
+
+                {/* NGO Events Section */}
+                <div className="mt-8 mb-16 px-4">
+                    <NgoEvents locality={userData.locationName.split(',')[0]} />
                 </div>
             </div>
         </Layout>
