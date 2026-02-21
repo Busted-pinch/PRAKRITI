@@ -63,7 +63,9 @@ async def supervisor_agent(
         if not state.get("messages"):
             return {
                 "next_agent": "chatbot",
-                "structured_data": structured_data
+                "structured_data": structured_data,
+                "lat": lat,
+                "lon": lon
             }
 
         last_message = state["messages"][-1]
@@ -71,7 +73,9 @@ async def supervisor_agent(
         if not isinstance(last_message, HumanMessage):
             return {
                 "next_agent": "chatbot",
-                "structured_data": structured_data
+                "structured_data": structured_data,
+                "lat": lat,
+                "lon": lon
             }
 
         query = (last_message.content or "").lower()
@@ -165,7 +169,9 @@ async def supervisor_agent(
 
         return {
             "next_agent": next_agent,
-            "structured_data": structured_data
+            "structured_data": structured_data,
+            "lat": lat,
+            "lon": lon
         }
 
     except Exception as e:
@@ -174,5 +180,7 @@ async def supervisor_agent(
         return {
             "next_agent": "chatbot",
             "structured_data": state.get("structured_data", {}),
+            "lat": state.get("lat"),
+            "lon": state.get("lon"),
             "error": str(e)
         }

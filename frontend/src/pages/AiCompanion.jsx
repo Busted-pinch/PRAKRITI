@@ -30,7 +30,7 @@ const AiCompanion = () => {
     ]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
-    const [locationData, setLocationData] = useState({ lat: null, lon: null });
+    const [locationData, setLocationData] = useState({ lat: 28.6139, lon: 77.2090 });
 
     // WebSocket Refs
     const wsRef = useRef(null);
@@ -64,19 +64,23 @@ const AiCompanion = () => {
             setPlaceholderIndex((prev) => (prev + 1) % PLACEHOLDERS.length);
         }, 4000);
 
-        // Fetch location for context window
-        const fetchLocation = async () => {
-            try {
-                const res = await fetch('https://ipapi.co/json/');
-                const data = await res.json();
-                if (data && data.latitude && data.longitude) {
-                    setLocationData({ lat: data.latitude, lon: data.longitude });
-                }
-            } catch (err) {
-                console.log("Chat location fetch failed", err);
-            }
-        };
-        fetchLocation();
+        // Request precise location from user's browser
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setLocationData({
+                        lat: position.coords.latitude,
+                        lon: position.coords.longitude
+                    });
+                },
+                (error) => {
+                    console.warn("Geolocation denied/failed. Using default location (New Delhi):", error);
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        } else {
+            console.warn("Geolocation not supported by this browser.");
+        }
 
         return () => clearInterval(interval);
     }, []);
@@ -106,11 +110,11 @@ const AiCompanion = () => {
                         if (lastMsgPos >= 0 && prev[lastMsgPos].sender === 'bot' && prev[lastMsgPos].isStreaming) {
                             // Update existing streaming message
                             const newMessages = [...prev];
-                            newMessages[lastMsgPos] = { ...newMessages[lastMsgPos], text: data.content };
+                            newMessages[lastMsgPos] = { ...newMessages[lastMsgPos], text: data.content, agent: data.node || newMessages[lastMsgPos].agent };
                             return newMessages;
                         } else {
                             // Add new streaming message
-                            return [...prev, { id: Date.now(), text: data.content, sender: 'bot', isStreaming: true }];
+                            return [...prev, { id: Date.now(), text: data.content, sender: 'bot', isStreaming: true, agent: data.node }];
                         }
                     });
                 } else if (data.type === 'complete') {
@@ -272,6 +276,11 @@ const AiCompanion = () => {
                                     ? 'bg-white/5 text-gray-200 rounded-tl-sm border border-white/10'
                                     : 'bg-white text-gray-700 rounded-tl-sm border border-gray-100 shadow-sm')
                                 }`}>
+                                {msg.sender === 'bot' && msg.agent && (
+                                    <div className={`text-[10px] mb-1.5 font-bold tracking-wider uppercase ${isDarkMode ? 'text-emerald-400/80' : 'text-emerald-600/80'}`}>
+                                        Agent: {msg.agent}
+                                    </div>
+                                )}
                                 {formatMessage(msg.text)}
                             </div>
                         </div>

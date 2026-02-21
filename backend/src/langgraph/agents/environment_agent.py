@@ -56,8 +56,8 @@ async def environment_agent(state: UnifiedState, datastore: AggregateData) -> Di
             if recent.data:
                 last_time = datetime.fromisoformat(
                     recent.data[0]["recorded_at"].replace("Z", "")
-                )
-                if (datetime.utcnow() - last_time) < timedelta(minutes=10):
+                ).replace(tzinfo=None)
+                if (datetime.utcnow().replace(tzinfo=None) - last_time) < timedelta(minutes=10):
                     should_insert = False
 
             if should_insert:
