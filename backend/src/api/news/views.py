@@ -12,10 +12,9 @@ router = APIRouter()
 class NewsItem(BaseModel):
     headline: str
     summary_simple: str
-    why_it_matters_to_you: str
+    why_it_matters: str
     actionable_steps: List[str]
     impact_level: str
-    confidence_score: int
 
 class NewsResponse(BaseModel):
     articles: List[NewsItem]
@@ -45,22 +44,15 @@ async def get_personalized_news(current_user: dict = Depends(get_current_user)):
         "temperature": 32
     }
 
-    # 3. Fetch raw news
-    raw_news = news_service.fetch_environmental_news()
+    # 3. Fetch Globally Enriched News (Cache or LLM + Tavily)
+    enriched_news = await news_service.fetch_environmental_news()
 
-    if not raw_news:
+    if not enriched_news:
         return NewsResponse(articles=[])
 
-    # 4. RAG / Process via LLM
-    structured_news = process_news_for_user(
-        user_profile=profile_data,
-        environment_context=environment_context,
-        raw_news=raw_news
-    )
-
-    # 5. Build Response
+    # 4. Build Response
     items = []
-    for item in structured_news:
+    for item in enriched_news:
         try:
             items.append(NewsItem(**item))
         except Exception as e:
