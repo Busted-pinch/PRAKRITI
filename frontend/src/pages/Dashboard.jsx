@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     Wind, Map,
     Droplets, Thermometer,
@@ -10,7 +10,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useEnvironment } from '../context/EnvironmentContext';
 import GlassCard from '../components/GlassCard';
 import Layout from '../components/Layout';
-import DailyInsight from '../components/DailyInsight';
+
 import NewsSection from '../components/NewsSection';
 import LawPolicySection from '../components/LawPolicySection';
 import NgoEvents from '../components/NgoEvents';
@@ -43,23 +43,174 @@ const getAQIStatus = (aqi) => {
     return { label: 'Unhealthy', color: 'text-red-400' };
 };
 
-const MetricCard = ({ icon: Icon, label, value, unit, colorClass, isDarkMode }) => (
-    <GlassCard className="p-3 flex items-center gap-3 min-w-0" hoverEffect={false}>
-        <div className={`p-2 rounded-xl flex-shrink-0 ${isDarkMode ? `${colorClass}/20` : `${colorClass}/10`}`}>
-            <Icon className={`w-4 h-4 ${colorClass}`} />
-        </div>
-        <div className="min-w-0">
-            <div className={`text-[10px] uppercase tracking-wider truncate ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{label}</div>
-            <div className="font-bold text-base leading-tight truncate">
-                {value != null ? (
-                    <span>{typeof value === 'number' ? value.toFixed(value % 1 !== 0 ? 1 : 0) : value}<span className="text-xs font-normal ml-0.5 opacity-70">{unit}</span></span>
-                ) : (
-                    <span className="text-gray-500 text-sm">—</span>
-                )}
-            </div>
-        </div>
-    </GlassCard>
-);
+/* ─── Metric Card ─────────────────────────────────────────────
+   Hover  → lifts 3px + subtle colour glow
+   Click  → full-screen overlay modal pops out with detail view
+   (Backend team: populate the `insight` sections inside MetricModal)
+────────────────────────────────────────────────────────────── */
+const MetricModal = ({ metric, onClose, isDarkMode }) => {
+    // Close on ESC
+    const handleKey = useCallback((e) => { if (e.key === 'Escape') onClose(); }, [onClose]);
+    useEffect(() => {
+        window.addEventListener('keydown', handleKey);
+        return () => window.removeEventListener('keydown', handleKey);
+    }, [handleKey]);
+
+    const { icon: Icon, label, value, unit, colorClass, description } = metric;
+    const formattedValue = value != null
+        ? (typeof value === 'number' ? value.toFixed(value % 1 !== 0 ? 1 : 0) : value)
+        : '—';
+
+    return (
+        <AnimatePresence>
+            {/* Backdrop */}
+            <motion.div
+                className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={onClose}
+            >
+                {/* Blur + dim overlay */}
+                <div className={`absolute inset-0 ${isDarkMode ? 'bg-black/70 backdrop-blur-sm' : 'bg-black/30 backdrop-blur-sm'
+                    }`} />
+
+                {/* Modal card — stops propagation so clicking inside doesn't close */}
+                <motion.div
+                    className={`relative z-10 w-full max-w-md rounded-3xl border overflow-hidden shadow-2xl
+                        ${isDarkMode
+                            ? 'bg-gray-900/95 border-white/10'
+                            : 'bg-white border-gray-200'}`}
+                    initial={{ scale: 0.85, opacity: 0, y: 20 }}
+                    animate={{ scale: 1, opacity: 1, y: 0, transition: { type: 'spring', stiffness: 320, damping: 28 } }}
+                    exit={{ scale: 0.9, opacity: 0, y: 10, transition: { duration: 0.18 } }}
+                    onClick={e => e.stopPropagation()}
+                >
+                    {/* Gradient header bar */}
+                    <div className={`h-1.5 w-full bg-gradient-to-r ${colorClass
+                        .replace('text-', 'from-').replace('-400', '-500')
+                        } via-current to-transparent`}
+                        style={{ background: `linear-gradient(90deg, var(--tw-gradient-from, currentColor), transparent)` }}
+                    />
+                    {/* Use inline style for the bar since Tailwind can't compose dynamic gradients */}
+                    <div className={`absolute top-0 left-0 right-0 h-1.5 rounded-t-3xl`}
+                        style={{
+                            background: `linear-gradient(90deg, ${colorClass.includes('blue') ? '#3b82f6'
+                                : colorClass.includes('amber') ? '#f59e0b'
+                                    : colorClass.includes('cyan') ? '#06b6d4'
+                                        : colorClass.includes('teal') ? '#14b8a6'
+                                            : colorClass.includes('yellow') ? '#eab308'
+                                                : colorClass.includes('rose') ? '#f43f5e'
+                                                    : colorClass.includes('orange') ? '#f97316'
+                                                        : colorClass.includes('purple') ? '#a855f7'
+                                                            : colorClass.includes('pink') ? '#ec4899'
+                                                                : '#10b981'} 0%, transparent 100%)`
+                        }}
+                    />
+
+                    <div className="p-6 pt-7">
+                        {/* Header row */}
+                        <div className="flex items-start justify-between mb-5">
+                            <div className="flex items-center gap-3">
+                                <div className={`p-3 rounded-2xl ${isDarkMode ? `${colorClass.replace('text-', 'bg-').replace('-400', '-500')}/15`
+                                    : `${colorClass.replace('text-', 'bg-').replace('-400', '-500')}/10`}`}>
+                                    <Icon className={`w-6 h-6 ${colorClass}`} />
+                                </div>
+                                <div>
+                                    <p className={`text-xs font-bold uppercase tracking-widest mb-0.5 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{label}</p>
+                                    <p className={`text-3xl font-black ${colorClass}`}>
+                                        {formattedValue}
+                                        <span className={`text-base font-normal ml-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{unit}</span>
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={onClose}
+                                className={`p-2 rounded-xl transition-colors ${isDarkMode ? 'text-gray-500 hover:text-white hover:bg-white/10'
+                                    : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'}`}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Divider */}
+                        <div className={`h-px mb-5 ${isDarkMode ? 'bg-white/8' : 'bg-gray-100'}`} />
+
+                        {/* ── Insight sections (Backend team: fill these in) ── */}
+                        <div className="space-y-4">
+                            {/* Section 1: What this means for you */}
+                            <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-white/[0.04] border border-white/8' : 'bg-gray-50 border border-gray-100'}`}>
+                                <p className={`text-[11px] font-bold uppercase tracking-widest mb-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>What This Means for You</p>
+                                {/* TODO (Backend): Replace placeholder with personalised insight */}
+                                <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    Personalised analysis for {label} coming soon.
+                                    Your profile will be used to tailor recommendations based on your health, lifestyle, and location.
+                                </p>
+                            </div>
+
+
+                        </div>
+
+                        <p className={`mt-4 text-center text-[10px] ${isDarkMode ? 'text-gray-700' : 'text-gray-300'}`}>
+                            Press ESC or tap outside to close
+                        </p>
+                    </div>
+                </motion.div>
+            </motion.div>
+        </AnimatePresence>
+    );
+};
+
+const MetricCard = ({ icon: Icon, label, value, unit, colorClass, isDarkMode }) => {
+    const [open, setOpen] = useState(false);
+    const metric = { icon: Icon, label, value, unit, colorClass };
+
+    // Extract a raw hex/rgba for the box-shadow glow (simpler than Tailwind dynamic classes)
+    const glowColor = colorClass.includes('blue') ? 'rgba(59,130,246,0.35)'
+        : colorClass.includes('amber') ? 'rgba(245,158,11,0.35)'
+            : colorClass.includes('cyan') ? 'rgba(6,182,212,0.35)'
+                : colorClass.includes('teal') ? 'rgba(20,184,166,0.35)'
+                    : colorClass.includes('yellow') ? 'rgba(234,179,8,0.35)'
+                        : colorClass.includes('rose') ? 'rgba(244,63,94,0.35)'
+                            : colorClass.includes('orange') ? 'rgba(249,115,22,0.35)'
+                                : colorClass.includes('purple') ? 'rgba(168,85,247,0.35)'
+                                    : colorClass.includes('pink') ? 'rgba(236,72,153,0.35)'
+                                        : 'rgba(16,185,129,0.35)';
+
+    return (
+        <>
+            <motion.div
+                className="cursor-pointer"
+                whileHover={{ y: -3, boxShadow: `0 8px 24px ${glowColor}` }}
+                whileTap={{ scale: 0.97 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                onClick={() => setOpen(true)}
+            >
+                <GlassCard className="p-3 flex items-center gap-3 min-w-0" hoverEffect={false}>
+                    <div className={`p-2 rounded-xl flex-shrink-0 ${isDarkMode ? `${colorClass}/20` : `${colorClass}/10`}`}>
+                        <Icon className={`w-4 h-4 ${colorClass}`} />
+                    </div>
+                    <div className="min-w-0">
+                        <div className={`text-[10px] uppercase tracking-wider truncate ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{label}</div>
+                        <div className="font-bold text-base leading-tight truncate">
+                            {value != null ? (
+                                <span>
+                                    {typeof value === 'number' ? value.toFixed(value % 1 !== 0 ? 1 : 0) : value}
+                                    <span className="text-xs font-normal ml-0.5 opacity-70">{unit}</span>
+                                </span>
+                            ) : (
+                                <span className="text-gray-500 text-sm">—</span>
+                            )}
+                        </div>
+                    </div>
+                </GlassCard>
+            </motion.div>
+
+            {/* Expanded overlay portal */}
+            {open && <MetricModal metric={metric} onClose={() => setOpen(false)} isDarkMode={isDarkMode} />}
+        </>
+    );
+};
 
 const Dashboard = () => {
     const { isDarkMode } = useTheme();
@@ -206,18 +357,8 @@ const Dashboard = () => {
                     ))}
                 </div>
 
-                {/* Main Grid: News & Insights */}
-                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-                    {/* Left Column: News Section */}
-                    <div className="xl:col-span-9">
-                        <NewsSection isDarkMode={isDarkMode} />
-                    </div>
-
-                    {/* Right Column: Insights */}
-                    <div className="xl:col-span-3 space-y-6">
-                        <DailyInsight />
-                    </div>
-                </div>
+                {/* News Section — full width */}
+                <NewsSection isDarkMode={isDarkMode} />
 
                 {/* Laws & Agreements Full Width Section */}
                 <div className="mt-8 mb-8">
