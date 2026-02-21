@@ -81,12 +81,8 @@ async def onboarding(payload: OnboardingPayload, current_user = Depends(get_curr
     traits = calculate_traits(payload.answers)
     
     # Profile updates (name only usually)
-    existing_profile = store.get_user(user_id)
-    profile_updates = {"full_name": user_metadata.get("full_name", "Traveler")}
-    if existing_profile:
-        store.update_user(user_id, profile_updates)
-    else:
-        store.create_user({"id": user_id, **profile_updates})
+    profile_updates = {"id": user_id, "full_name": user_metadata.get("full_name", "Traveler")}
+    store.upsert_user(profile_updates)
 
     # Behavior profile
     behavior_data = {
