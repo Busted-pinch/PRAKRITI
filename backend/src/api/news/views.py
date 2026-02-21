@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
+import json
 
 from src.api.deps import get_current_user
 from src.core.aggregate_data import AggregateData
-from src.services.news_service import news_service
+from src.services.news_service import news_service, CACHE_KEY
+from src.core.supabase_client import supabase
+from src.core.cache import get_cache
 from src.langgraph.agents.news_agent import process_news_for_user
 
 router = APIRouter()
@@ -44,19 +47,47 @@ async def get_personalized_news(current_user: dict = Depends(get_current_user)):
         "temperature": 32
     }
 
-    # 3. Fetch Globally Enriched News (Cache or LLM + Tavily)
-    enriched_news = await news_service.fetch_environmental_news()
+    # 3. Ingest News if not cached
+    if not await get_cache(CACHE_KEY):
+        print("News cache missing, triggering background ingestion...")
+        await news_service.fetch_and_ingest_news()
 
-    if not enriched_news:
+    # 4. RAG Semantic Search
+    try:
+        # Create a semantic string representing what this user cares about
+        user_query = f"User Persona: {profile_data['persona']['name']}. " \
+                     f"Health conditions: {', '.join(profile_data['diseases'])}. " \
+                     f"Constraints: {json.dumps(profile_data['constraints'])}. " \
+                     f"Hobbies: {', '.join(profile_data['hobbies'])}."
+                     
+        query_embedding = news_service.get_embedding(user_query)
+        
+        if not query_embedding:
+            return NewsResponse(articles=[])
+
+        # Search Supabase vector DB
+        response = supabase.rpc("match_news_articles", {
+            "query_embedding": query_embedding,
+            "match_threshold": 0.0, # Lowered from 0.3 to 0.0 since local embeddings have different similarity ranges
+            "match_count": 10
+        }).execute()
+
+        matched_data = response.data or []
+        print(f"RAG retrieved {len(matched_data)} articles for user {user_id}")
+        
+        items = []
+        for row in matched_data:
+            items.append(NewsItem(
+                headline=row.get("title", ""),
+                summary_simple=row.get("summary", ""),
+                why_it_matters=row.get("why_it_matters", ""),
+                actionable_steps=row.get("actionable_steps", []),
+                impact_level=row.get("impact_level", "medium")
+            ))
+            
+        return NewsResponse(articles=items)
+
+    except Exception as e:
+        print(f"[News API] RAG Semantic Search failed: {e}")
         return NewsResponse(articles=[])
-
-    # 4. Build Response
-    items = []
-    for item in enriched_news:
-        try:
-            items.append(NewsItem(**item))
-        except Exception as e:
-            print(f"Skipping malformed LLM response item: {e}")
-
-    return NewsResponse(articles=items)
 

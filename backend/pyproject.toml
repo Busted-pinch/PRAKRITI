@@ -17,6 +17,7 @@ langchain-google-genai = "^1.0.0"
 python-dotenv = "^1.0.0"
 loguru = "^0.7.2"
 redis = "^7.2.0"
+sentence-transformers = "^5.2.3"
 
 [build-system]
 requires = ["poetry-core"]

@@ -6,6 +6,10 @@ from src.core.cache import get_cache, set_cache
 from src.llm.gemini import get_gemini_llm
 from langchain_core.messages import HumanMessage
 from src.services.tavily_service import tavily_service
+from src.core.supabase_client import supabase
+
+# We will lazy-load the embedding model so it doesn't block the backend startup
+embedding_model = None
 
 CACHE_KEY = "global_enriched_news_v1"
 CACHE_TTL = 3600  # 1 hour
@@ -23,20 +27,27 @@ Provide ONLY a JSON array of objects with the exact keys above.
 """
 
 class NewsService:
-    async def fetch_environmental_news(self) -> List[Dict]:
-        # 1. Check Redis Cache
-        cached_news = await get_cache(CACHE_KEY)
-        if cached_news:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.info("\n⚡🚀 [REDIS CACHE HIT] Served globally enriched news instantly!\n")
-            return cached_news
+    def get_embedding(self, text: str) -> List[float]:
+        """Generates a 384-dimensional vector embedding using a local HuggingFace model."""
+        global embedding_model
+        try:
+            if embedding_model is None:
+                print("\n[INFO] Loading local embedding model (all-MiniLM-L6-v2) for the first time...")
+                print("[INFO] This might take a minute if it needs to download weights from HuggingFace.")
+                from sentence_transformers import SentenceTransformer
+                embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+                print("[INFO] Local embedding model loaded successfully!\n")
 
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.info("\n🐌🌐 [API FETCH] Cache Miss. Fetching Top 10 News from Tavily and Enriching with LLM...\n")
+            # The model returns a numpy array, convert to standard python float list for DB
+            embedding_array = embedding_model.encode(text)
+            return embedding_array.tolist()
+        except Exception as e:
+            print(f"Error generating local embedding: {e}")
+            return []
 
-        # 2. Fetch from Tavily Service
+    async def fetch_and_ingest_news(self) -> bool:
+        """Fetches from Tavily, enriches via LLM, embeds, and stores in Supabase."""
+        # 1. Fetch from Tavily Service
         extracted_news = tavily_service.search_news()
         
         if not extracted_news:
@@ -65,12 +76,41 @@ class NewsService:
             enriched_news = json.loads(response_text)
         except Exception as parse_e:
             print(f"Error enriching news via Langchain/Gemini: {parse_e}")
-            return extracted_news # Fallback to raw news if LLM parsing fails
+            return False
 
-        # 4. Store in Redis
+        # 4. Embed and Store in Supabase
         if enriched_news:
-            await set_cache(CACHE_KEY, enriched_news, ttl=CACHE_TTL)
-            
-        return enriched_news
+            for item in enriched_news:
+                # Create a rich text representation for the embedding
+                combined_text = f"Headline: {item.get('headline', '')}\nSummary: {item.get('summary_simple', '')}\nImpact: {item.get('why_it_matters', '')}"
+                embedding = self.get_embedding(combined_text)
+                
+                if embedding:
+                    try:
+                        # Find original source from tavily results
+                        source = "Global News"
+                        for raw in extracted_news:
+                            if raw.get('title', '')[:20] in item.get('headline', '') or item.get('headline', '')[:20] in raw.get('title', ''):
+                                source = raw.get('source', '')
+                                break
+                                
+                        data = {
+                            "title": item.get('headline', ''),
+                            "content": combined_text,
+                            "source": source,
+                            "summary": item.get('summary_simple', ''),
+                            "impact_level": item.get('impact_level', 'medium'),
+                            "why_it_matters": item.get('why_it_matters', ''),
+                            "actionable_steps": item.get('actionable_steps', []),
+                            "embedding": embedding
+                        }
+                        supabase.table("news_articles").insert(data).execute()
+                    except Exception as e:
+                        print(f"Error inserting news to Supabase: {e}")
+                        
+            # Update cache to prevent spamming Tavily
+            await set_cache(CACHE_KEY, "ingested", ttl=CACHE_TTL)
+            return True
+        return False
 
 news_service = NewsService()
