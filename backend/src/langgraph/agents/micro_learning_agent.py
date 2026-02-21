@@ -1,7 +1,7 @@
 from typing import Dict, Any
 from langchain_core.messages import AIMessage, SystemMessage, HumanMessage
 from src.langgraph.state import UnifiedState
-from src.llm.gemini import get_gemini_llm
+from src.llm.factory import get_llm
 
 
 async def micro_learning_agent(state: UnifiedState, datastore: Any) -> Dict[str, Any]:
@@ -19,7 +19,7 @@ async def micro_learning_agent(state: UnifiedState, datastore: Any) -> Dict[str,
     conflict = twin.get("behavior_environment_conflict", {})
     interest_vector = behavior_profile.get("interest_vector", {})
 
-    llm = get_gemini_llm()
+    llm = get_llm(provider="grok")
 
     if not llm:
         return {

@@ -114,6 +114,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str = None):
     try:
         while True:
             # 3. Receive Message (Expect JSON)
+            message_data = {}
             try:
                 data = await websocket.receive_text()
                 message_data = json.loads(data)
@@ -123,6 +124,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str = None):
             except json.JSONDecodeError:
                 # Fallback for plain text for testing convenience
                 content = data
+                message_data = {}
             
             # 4. Prepare State with Real User Context
             initial_state = {
