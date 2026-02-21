@@ -37,6 +37,15 @@ class AggregateData:
             return UserData(**res.data[0])
         return None
 
+    def upsert_user(self, user_data: dict) -> Optional[UserData]:
+        """Creates or updates a user profile safely (upsert on primary key id)."""
+        res = supabase.table("profiles").upsert(user_data, on_conflict="id").execute()
+        if res.data:
+            return UserData(**res.data[0])
+        return None
+
+
+
     # ---------- SESSION ----------
     def get_session(self, session_id: str) -> Optional[SessionData]:
         res = (
