@@ -98,7 +98,6 @@ async def onboarding(payload: OnboardingPayload, current_user = Depends(get_curr
         "mbti": persona.name, # Using persona name as placeholder for MBTI
         "selected_interests": payload.selected_interests,
         "hobbies": payload.hobbies,
-        "interests": payload.selected_interests,
         "diseases": payload.diseases,
         "constraints": payload.constraints.dict(),
     }

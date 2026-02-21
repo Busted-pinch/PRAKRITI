@@ -7,6 +7,9 @@ from src.api.environment.services import fetch_environment_from_api
 from src.core.twin_engine import TwinEngine
 from src.core.open_meteo_client import fetch_weather, fetch_air_quality
 from src.core.waqi_client import fetch_waqi
+import logging
+
+logger = logging.getLogger(__name__)
 
 class AggregateData:
     """
@@ -52,6 +55,13 @@ class AggregateData:
         """
         Fetch latest weather snapshot from environmental_readings.
         """
+        cache_key = f"weather_data:{location}"
+        cached = await get_cache(cache_key)
+        if cached:
+            logger.info(f"🟢 [CACHE HIT] Weather data fetched from Redis for {location}")
+            return cached
+
+        logger.info(f"🔴 [CACHE MISS] Fetching Weather data from DB (fallback to API) for {location}")
         res = (
             supabase
             .table("environmental_readings")
@@ -80,6 +90,7 @@ class AggregateData:
             elif param == "uv_index" and "uv_index" not in weather:
                 weather["uv_index"] = value
 
+        await set_cache(cache_key, weather, ttl=1800)
         return weather
     
     # ---------- CLIMATE INFO ----------
@@ -87,6 +98,11 @@ class AggregateData:
         """
         Return simple derived climate stats.
         """
+        cache_key = f"climate_info:{location}"
+        cached = await get_cache(cache_key)
+        if cached:
+            return cached
+
         res = (
             supabase
             .table("environmental_readings")
@@ -96,6 +112,10 @@ class AggregateData:
             .limit(100)
             .execute()
         )
+        
+        climate_stats = res.data or []
+        await set_cache(cache_key, climate_stats, ttl=1800)
+        return climate_stats
 
     def __init__(self):
         self.twin_engine = TwinEngine()
@@ -159,8 +179,10 @@ class AggregateData:
         cache_key = f"env:{round(lat,4)}:{round(lon,4)}"
         cached = await get_cache(cache_key)
         if cached:
+            logger.info(f"🟢 [CACHE HIT] Environment snapshot fetched from Redis for lat:{lat}, lon:{lon}")
             return cached
 
+        logger.info(f"🔴 [CACHE MISS] Fetching Environment data from Open Meteo API / Waqi API for lat:{lat}, lon:{lon}")
         weather, air, waqi = await asyncio.gather(
             fetch_weather(lat, lon),
             fetch_air_quality(lat, lon),
