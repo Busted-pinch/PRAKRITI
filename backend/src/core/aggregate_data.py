@@ -58,10 +58,10 @@ class AggregateData:
         cache_key = f"weather_data:{location}"
         cached = await get_cache(cache_key)
         if cached:
-            logger.info(f"🟢 [CACHE HIT] Weather data fetched from Redis for {location}")
+            logger.info(f"\n⚡🚀 [REDIS CACHE HIT] Served Weather for {location} instantly!\n")
             return cached
 
-        logger.info(f"🔴 [CACHE MISS] Fetching Weather data from DB (fallback to API) for {location}")
+        logger.info(f"\n🐌🌐 [API FETCH] Cache Miss. Fetching Weather for {location} from DB...\n")
         res = (
             supabase
             .table("environmental_readings")
@@ -101,8 +101,10 @@ class AggregateData:
         cache_key = f"climate_info:{location}"
         cached = await get_cache(cache_key)
         if cached:
+            logger.info(f"\n⚡🚀 [REDIS CACHE HIT] Served Climate Info for {location} instantly!\n")
             return cached
-
+            
+        logger.info(f"\n🐌🌐 [API FETCH] Cache Miss. Fetching Climate Info for {location} from DB...\n")
         res = (
             supabase
             .table("environmental_readings")
@@ -179,10 +181,10 @@ class AggregateData:
         cache_key = f"env:{round(lat,4)}:{round(lon,4)}"
         cached = await get_cache(cache_key)
         if cached:
-            logger.info(f"🟢 [CACHE HIT] Environment snapshot fetched from Redis for lat:{lat}, lon:{lon}")
+            logger.info(f"\n⚡🚀 [REDIS CACHE HIT] Served Environment Snapshot for ({lat}, {lon}) instantly!\n")
             return cached
 
-        logger.info(f"🔴 [CACHE MISS] Fetching Environment data from Open Meteo API / Waqi API for lat:{lat}, lon:{lon}")
+        logger.info(f"\n🐌🌐 [API FETCH] Cache Miss. Fetching from Open Meteo / Waqi for ({lat}, {lon})...\n")
         weather, air, waqi = await asyncio.gather(
             fetch_weather(lat, lon),
             fetch_air_quality(lat, lon),

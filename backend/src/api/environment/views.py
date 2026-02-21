@@ -2,6 +2,7 @@ import asyncio
 from fastapi import APIRouter, Depends
 from src.api.deps import get_current_user
 from src.core.aggregate_data import AggregateData
+from src.core.cache import get_cache, set_cache
 from src.core.open_meteo_client import fetch_weather, fetch_air_quality
 from src.api.environment.utils import parse_hourly
 from src.core.aggregate_data import AggregateData
@@ -38,6 +39,13 @@ async def get_current_environment(lat: float, lon: float):
 async def get_hourly_forecast(lat: float, lon: float):
     logger.debug(f"[Environment API - Hourly] Fetching forecast for lat={lat}, lon={lon}")
 
+    cache_key = f"api:env:hourly:{round(lat, 4)}:{round(lon, 4)}"
+    cached = await get_cache(cache_key)
+    if cached:
+        logger.info(f"\n⚡🚀 [REDIS CACHE HIT] Served Hourly Forecast for ({lat}, {lon}) instantly!\n")
+        return cached
+
+    logger.info(f"\n🐌🌐 [API FETCH] Cache Miss. Fetching Hourly Forecast for ({lat}, {lon}) from Open Meteo / Waqi...\n")
     weather, air = await asyncio.gather(
         fetch_weather(lat, lon),
         fetch_air_quality(lat, lon)
@@ -63,6 +71,7 @@ async def get_hourly_forecast(lat: float, lon: float):
         "forecast_daily_avg": {},
         "forecast_trajectory": forecast_trajectory
     }
+    await set_cache(cache_key, res, ttl=1800)
     logger.debug(f"[Environment API - Hourly] Returning forecast with {len(forecast_trajectory)} hours of data")
     return res
 
@@ -75,6 +84,13 @@ async def get_hourly_forecast(lat: float, lon: float):
 async def get_environment_trend(days: int = 7):
     logger.debug(f"[Environment API - Trend] Fetching environment trend for past {days} days")
 
+    cache_key = f"api:env:trend:{days}"
+    cached = await get_cache(cache_key)
+    if cached:
+        logger.info(f"\n⚡🚀 [REDIS CACHE HIT] Served environment trend for last {days} days instantly!\n")
+        return cached
+
+    logger.info(f"\n🐌🌐 [API FETCH] Cache Miss. Fetching environment trend for last {days} days from DB...\n")
     from src.core.supabase_client import supabase
 
     response = supabase.table("environmental_readings") \
@@ -92,10 +108,12 @@ async def get_environment_trend(days: int = 7):
 
     avg = sum(values) / len(values) if values else 0
 
-    return {
+    res = {
         "avg_pm2_5": avg,
         "trend": "improving" if avg < 50 else "worsening"
     }
+    await set_cache(cache_key, res, ttl=3600)  # Trend can be cached longer
+    return res
 
 
 # ---------------------------------------
@@ -104,7 +122,15 @@ async def get_environment_trend(days: int = 7):
 
 @router.get("/exposure")
 async def get_exposure_history(start: str, end: str):
+    logger.debug(f"[Environment API - Exposure] Fetching exposure history from {start} to {end}")
+    
+    cache_key = f"api:env:exposure:{start}:{end}"
+    cached = await get_cache(cache_key)
+    if cached:
+        logger.info(f"\n⚡🚀 [REDIS CACHE HIT] Served exposure history from {start} to {end} instantly!\n")
+        return cached
 
+    logger.info(f"\n🐌🌐 [API FETCH] Cache Miss. Fetching exposure history from {start} to {end} from DB...\n")
     from src.core.supabase_client import supabase
 
     response = supabase.table("environmental_readings") \
@@ -128,6 +154,7 @@ async def get_exposure_history(start: str, end: str):
         "cumulative_exposure": cumulative,
         "risk_score": cumulative / 100 if cumulative else 0
     }
+    await set_cache(cache_key, res, ttl=3600) # History won't change often
     logger.debug(f"[Environment API - Exposure] Returning exposure: {res}")
     return res
 
