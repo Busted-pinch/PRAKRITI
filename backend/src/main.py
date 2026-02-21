@@ -16,6 +16,7 @@ from src.api.behavior.views import router as system_behavior_router
 from src.api.user.behavior.views import router as user_behavior_router
 from src.api.news.views import router as news_router
 from src.api.law.views import router as law_router
+from src.api.ngo.views import router as ngo_router
 
 
 
@@ -54,7 +55,7 @@ app.include_router(user_behavior_router, prefix="/user", tags=["User Attributes"
 app.include_router(system_behavior_router, prefix="/behavior", tags=["Behavior"])
 app.include_router(news_router, prefix="/news", tags=["News Intelligence"])
 app.include_router(law_router, prefix="/law", tags=["Law & Policy"])
-
+app.include_router(ngo_router, prefix="/ngo", tags=["NGO Events"])
 
 
 @app.on_event("startup")

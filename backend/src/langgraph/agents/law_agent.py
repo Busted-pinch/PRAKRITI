@@ -8,14 +8,12 @@ LAW_SYSTEM_PROMPT = """You are an Environmental Laws & Agreements Intelligence A
 
 Your task:
 1. Convert raw law/legislation text into simple language
-2. Explain its relevance to a specific user context (provided)
-3. Provide actionable insights the user can take
+2. Explain its core premise concisely
 
 Rules:
 - Simplify, no jargon
 - Always return JSON with fields exactly as requested
-- If insufficient context, respond explicitly
-- Maximum 80 words per text field.
+- Maximum 80 words for the summary.
 """
 
 def process_laws_for_user(user_profile: dict, raw_laws: list) -> list:
@@ -56,19 +54,11 @@ def process_laws_for_user(user_profile: dict, raw_laws: list) -> list:
             REQUIRED OUTPUT FORMAT:
             {{
               "title": "{law.get('title', '')}",
-              "summary_simple": "",
-              "why_it_matters_to_user": "",
-              "actionable_steps": [
-                "",
-                "",
-                ""
-              ],
-              "source": "{law.get('source_url', '')}",
-              "confidence_score": 0-100
+              "summary_simple": ""
             }}
             """
             
-            gemini_model = genai.GenerativeModel("gemini-1.5-pro-latest")
+            gemini_model = genai.GenerativeModel("gemini-2.5-flash-lite")
             response = gemini_model.generate_content(
                 prompt,
                 generation_config=genai.GenerationConfig(
@@ -80,7 +70,6 @@ def process_laws_for_user(user_profile: dict, raw_laws: list) -> list:
                 result = json.loads(response.text)
                 # carry over frontend routing fields
                 result["category"] = law.get("category", "regulation")
-                result["type"] = law.get("type", "national")
                 processed_laws.append(result)
             except Exception as parse_e:
                 print(f"Error parsing JSON from LLM: {parse_e}")

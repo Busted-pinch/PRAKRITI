@@ -22,3 +22,5 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+cloc-2.04.exe

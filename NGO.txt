@@ -1,0 +1,97 @@
+# NGO Event Recommendation Module Implementation Plan
+
+## 1. Objective
+Implement an NGO module to fetch local events hosted by NGOs using the Tavily API, store and cache these events, and recommend the best events to users based on their personal details from Supabase using vector similarity search.
+
+## 2. Tools for Similarity Search Explained
+To perform the recommendation, we need a way to match the user's profile with the events. We will use the following tools:
+- **Embedding Model**: We will use an embedding model (e.g., OpenAI's text-embedding-3-small or an open-source alternative via LangChain) to convert the text of the user's profile (interests, constraints) and the text of the NGO events into high-dimensional numerical vectors (embeddings).
+- **pgvector (Supabase)**: We will store these event embeddings directly in our Supabase PostgreSQL database using the `pgvector` extension.
+- **Cosine Similarity (pgvector `<=>` operator)**: To find the most relevant events, we will create a Postgres function (RPC) in Supabase. This function will take the user's vectorized profile, compare it against all event vectors using Cosine Distance (`<=>`), and return the events with the closest match (highest similarity).
+
+## 3. API Routes Alignment
+The new routes will be aligned with the existing FastAPI structure (e.g., `backend/src/api/`).
+- **New Router Directory**: `backend/src/api/ngo/views.py`
+- **Route Prefix**: `/ngo`
+
+### API Endpoints
+- `GET /ngo/recommendations`: Fetches the top recommended events for the currently authenticated user based on vector search. It will:
+  1. Retrieve the user's details from the database.
+  2. Embed the user's details.
+  3. Call the Supabase RPC match function to find similar events.
+  4. (If no events are found locally within radius, fallback to trigger a Tavily fetch for that locality, embed the results, insert into DB, and then return matching events).
+- `POST /ngo/fetch` (Internal/Admin): Triggered manually or by a cron job to fetch new events via Tavily, embed them, and cache them in Redis/Supabase.
+
+### Backend Integration
+In `backend/src/main.py`, we will add:
+```python
+from src.api.ngo.views import router as ngo_router
+...
+app.include_router(ngo_router, prefix="/ngo", tags=["NGO Events"])
+```
+
+## 4. Workflows
+
+### Data Ingestion (Tavily -> Redis -> Supabase)
+1. **Tavily Fetch**: Query Tavily for NGO events in a specific locality for upcoming dates.
+2. **Caching**: Cache the raw Tavily JSON response in Redis (e.g., `tavily:events:{locality}`) to prevent duplicate external API calls.
+3. **Embedding Generation**: Parse the cached events, generate vector embeddings for each event's description and title.
+4. **Storage**: Insert the events and their embeddings into the `ngo_events` table in Supabase.
+
+### Recommendation (Frontend -> FastAPI -> Supabase)
+1. User navigates to the "Local NGO Events" tab in the React frontend.
+2. Frontend calls `GET /api/ngo/recommendations` (or similar authenticated route).
+3. Backend fetches user interests from `behavior_profiles`.
+4. Backend generates an embedding for the user's text profile.
+5. Backend executes the pgvector similarity search RPC on Supabase.
+6. Backend returns the sorted, recommended event list to the frontend.
+
+## 5. Database Schema Additions
+```sql
+-- Enable pgvector
+create extension if not exists vector;
+
+-- Create table for storing events
+create table if not exists ngo_events (
+    id uuid primary key default uuid_generate_v4(),
+    ngo_name text not null,
+    event_title text not null,
+    description text,
+    location text,
+    event_date timestamp with time zone,
+    source_url text,
+    embedding vector(1536), -- Dimension depends on embedding model
+    created_at timestamp with time zone default now()
+);
+
+-- Index for faster vector search
+create index on ngo_events using ivfflat (embedding vector_cosine_ops)
+with (lists = 100);
+
+-- RPC Function for Similarity Search
+create or replace function match_ngo_events (
+  query_embedding vector(1536),
+  match_threshold float,
+  match_count int
+)
+returns table (
+  id uuid,
+  ngo_name text,
+  event_title text,
+  description text,
+  similarity float
+)
+language sql stable
+as $$
+  select
+    ngo_events.id,
+    ngo_events.ngo_name,
+    ngo_events.event_title,
+    ngo_events.description,
+    1 - (ngo_events.embedding <=> query_embedding) as similarity
+  from ngo_events
+  where 1 - (ngo_events.embedding <=> query_embedding) > match_threshold
+  order by similarity desc
+  limit match_count;
+$$;
+```

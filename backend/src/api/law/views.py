@@ -1,23 +1,17 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 from src.api.deps import get_current_user
 from src.core.aggregate_data import AggregateData
 from src.services.law_service import law_service
-from src.langgraph.agents.law_agent import process_laws_for_user
 
 router = APIRouter()
 
 class LawItem(BaseModel):
     title: str
     summary_simple: str
-    why_it_matters_to_user: str
-    actionable_steps: List[str]
-    source: str
-    confidence_score: int
-    category: str
-    type: str
+    category: Optional[str] = None
 
 class LawResponse(BaseModel):
     laws: List[LawItem]
@@ -40,23 +34,21 @@ async def get_personalized_laws(current_user: dict = Depends(get_current_user)):
     }
 
     # 2. Fetch raw laws
-    raw_laws = law_service.fetch_environmental_laws()
+    raw_laws = await law_service.fetch_environmental_laws()
 
     if not raw_laws:
         return LawResponse(laws=[])
 
-    # 3. Process via LLM
-    structured_laws = process_laws_for_user(
-        user_profile=profile_data,
-        raw_laws=raw_laws
-    )
-
-    # 4. Build Response
+    # 3. Build Response directly from fetched data
     items = []
-    for item in structured_laws:
+    for law in raw_laws:
         try:
-            items.append(LawItem(**item))
+            items.append(LawItem(
+                title=law.get("title", ""),
+                summary_simple=law.get("raw_text", "")[:200] + "..." if len(law.get("raw_text", "")) > 200 else law.get("raw_text", ""), # Use a snippet of raw text as a summary fallback
+                category=law.get("category")
+            ))
         except Exception as e:
-            print(f"Skipping malformed LLM response item: {e}")
+            print(f"Skipping malformed data item: {e}")
 
     return LawResponse(laws=items)

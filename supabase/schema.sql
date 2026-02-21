@@ -3,6 +3,7 @@
 -- =====================================================
 
 create extension if not exists "uuid-ossp";
+create extension if not exists vector;
 
 -- =====================================================
 -- PROFILES (linked to auth.users)
@@ -205,7 +206,72 @@ begin
   return new;
 end;
 $$ language plpgsql security definer;
-
 create trigger on_auth_user_created
 after insert on auth.users
 for each row execute procedure public.handle_new_user();
+
+
+-- =====================================================
+-- RAG: NEWS ARTICLES WITH EMBEDDINGS
+-- =====================================================
+
+create table if not exists news_articles (
+    id uuid primary key default uuid_generate_v4(),
+    title text not null,
+    content text not null,
+    source text,
+    summary text,
+    impact_level text,
+    why_it_matters text,
+    actionable_steps jsonb,
+    published_at timestamp with time zone default now(),
+    embedding vector(384), -- sentence-transformers/all-MiniLM-L6-v2 creates 384-dimensional vectors
+    created_at timestamp with time zone default now()
+);
+
+-- Index for faster vector similarity search
+create index if not exists idx_news_articles_embedding on news_articles using hnsw (embedding vector_cosine_ops);
+
+-- Enable RLS (Read-only for all authenticated users)
+alter table news_articles enable row level security;
+
+create policy "Users can read news articles"
+on news_articles for select to authenticated using (true);
+
+-- RPC for Semantic Search (Cosine Similarity)
+create or replace function match_news_articles (
+  query_embedding vector(384),
+  match_threshold float,
+  match_count int
+)
+returns table (
+  id uuid,
+  title text,
+  content text,
+  source text,
+  summary text,
+  impact_level text,
+  why_it_matters text,
+  actionable_steps jsonb,
+  published_at timestamp with time zone,
+  similarity float
+)
+language sql
+stable
+as $$
+  select
+    id,
+    title,
+    content,
+    source,
+    summary,
+    impact_level,
+    why_it_matters,
+    actionable_steps,
+    published_at,
+    1 - (news_articles.embedding <=> query_embedding) as similarity
+  from news_articles
+  where 1 - (news_articles.embedding <=> query_embedding) > match_threshold
+  order by (news_articles.embedding <=> query_embedding) asc
+  limit match_count;
+$$;
