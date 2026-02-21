@@ -407,18 +407,29 @@ const Dashboard = () => {
                 {/* Header Greeting */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold flex items-center gap-2">
+                        <h1 className="text-4xl font-black flex items-center gap-2">
                             Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500">{userData.userName}</span>
                         </h1>
-                        <p className={`flex items-center gap-2 mt-2 font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            <Map className="w-4 h-4" />
-                            {userData.locationName}
-                            {envData?.aqi != null && (
-                                <span className={`ml-2 text-xs font-bold px-2 py-0.5 rounded-full border ${isDarkMode ? 'border-white/10 bg-white/5' : 'border-gray-200 bg-white'} ${aqiStatus.color}`}>
-                                    AQI {envData.aqi} · {aqiStatus.label}
+                        <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4 mt-3">
+                            <p className={`flex items-center gap-2 font-bold ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                <Map className="w-4 h-4 text-emerald-500" />
+                                {userData.locationName}
+                            </p>
+                            <div className={`hidden md:block w-1.5 h-1.5 rounded-full ${isDarkMode ? 'bg-white/20' : 'bg-gray-300'}`} />
+                            <div className="flex items-center gap-2">
+                                <span className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-tighter ${isDarkMode ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'}`}>
+                                    {userData.persona.name}
                                 </span>
+                                <span className={`text-sm italic opacity-60 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    "{userData.persona.desc}"
+                                </span>
+                            </div>
+                            {envData?.aqi != null && (
+                                <div className={`flex items-center gap-2 px-3 py-1 rounded-lg border text-xs font-black ${isDarkMode ? 'border-white/10 bg-white/5' : 'border-gray-200 bg-white'} ${aqiStatus.color}`}>
+                                    AQI {envData.aqi} · {aqiStatus.label}
+                                </div>
                             )}
-                        </p>
+                        </div>
                     </div>
 
                     {/* Environmental Mode Toggle */}
