@@ -53,11 +53,13 @@ export const AuthProvider = ({ children }) => {
             const meResponse = await api.get('/auth/me');
             setUser(meResponse.data.user);
 
-            return true;
+            const hasPersona = !!meResponse.data.profile?.persona;
+
+            return { success: true, hasPersona };
         } catch (err) {
             console.error("Login failed", err);
             setError(err.response?.data?.detail || "Login failed");
-            return false;
+            return { success: false, hasPersona: false };
         } finally {
             setLoading(false);
         }

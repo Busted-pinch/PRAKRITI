@@ -19,9 +19,13 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const success = await login(email, password);
-        if (success) {
-            navigate(from, { replace: true });
+        const result = await login(email, password);
+        if (result.success) {
+            if (result.hasPersona) {
+                navigate(from, { replace: true });
+            } else {
+                navigate('/profile', { replace: true });
+            }
         }
     };
 

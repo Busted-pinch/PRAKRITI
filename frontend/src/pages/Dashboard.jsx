@@ -4,12 +4,11 @@ import { motion } from 'framer-motion';
 import {
     Wind, Map,
     Droplets, Thermometer,
-    Leaf, Zap
+    Leaf, Zap, Eye, Gauge, CloudRain, FlaskConical, Flame
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useEnvironment } from '../context/EnvironmentContext';
 import GlassCard from '../components/GlassCard';
-import MapWidget from '../components/MapWidget';
 import Layout from '../components/Layout';
 import DailyInsight from '../components/DailyInsight';
 import NewsSection from '../components/NewsSection';
@@ -36,16 +35,37 @@ const calculateAQITolerance = (sensitivity) => {
     }
 };
 
-const RECOMMENDATIONS = [
-    { id: 1, title: 'Forest Bathing', location: 'Greenwood Sanctuary', match: 98, image: 'bg-emerald-900' },
-    { id: 2, title: 'Coastal Run', location: 'Azure Bay', match: 92, image: 'bg-blue-900' },
-    { id: 3, title: 'Urban Gardening', location: 'Community Roof', match: 85, image: 'bg-amber-900' },
-];
+const getAQIStatus = (aqi) => {
+    if (aqi == null) return { label: 'N/A', color: 'text-gray-400' };
+    if (aqi <= 50) return { label: 'Good', color: 'text-emerald-400' };
+    if (aqi <= 100) return { label: 'Moderate', color: 'text-yellow-400' };
+    if (aqi <= 150) return { label: 'Unhealthy for Sensitive', color: 'text-orange-400' };
+    return { label: 'Unhealthy', color: 'text-red-400' };
+};
+
+const MetricCard = ({ icon: Icon, label, value, unit, colorClass, isDarkMode }) => (
+    <GlassCard className="p-3 flex items-center gap-3 min-w-0" hoverEffect={false}>
+        <div className={`p-2 rounded-xl flex-shrink-0 ${isDarkMode ? `${colorClass}/20` : `${colorClass}/10`}`}>
+            <Icon className={`w-4 h-4 ${colorClass}`} />
+        </div>
+        <div className="min-w-0">
+            <div className={`text-[10px] uppercase tracking-wider truncate ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{label}</div>
+            <div className="font-bold text-base leading-tight truncate">
+                {value != null ? (
+                    <span>{typeof value === 'number' ? value.toFixed(value % 1 !== 0 ? 1 : 0) : value}<span className="text-xs font-normal ml-0.5 opacity-70">{unit}</span></span>
+                ) : (
+                    <span className="text-gray-500 text-sm">—</span>
+                )}
+            </div>
+        </div>
+    </GlassCard>
+);
 
 const Dashboard = () => {
     const { isDarkMode } = useTheme();
     const { environmentalMode, setEnvironmentalMode } = useEnvironment();
     const [userData, setUserData] = useState(null);
+    const [envData, setEnvData] = useState(null);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
@@ -76,13 +96,13 @@ const Dashboard = () => {
                 ]);
 
                 let profileData = null;
-                let envData = null;
+                let environment = null;
 
                 if (profileRes.status === 'fulfilled') {
                     profileData = profileRes.value.data;
                 }
                 if (envRes.status === 'fulfilled') {
-                    envData = envRes.value.data;
+                    environment = envRes.value.data;
                 }
 
                 if (!profileData) {
@@ -90,22 +110,21 @@ const Dashboard = () => {
                     return;
                 }
 
-                const persona = profileData?.persona || { name: "Traveler", desc: "Your journey has just begun." };
-                const aqiValue = envData?.aqi || 42;
+                const aqiValue = environment?.aqi ?? null;
                 const sensitivity = profileData?.constraints?.aqi_sensitivity || 'med';
                 const tolerance = calculateAQITolerance(sensitivity);
 
                 let energyDesc = "Optimal";
-                if (aqiValue > tolerance) energyDesc = "Draining";
-                else if (aqiValue > tolerance - 20) energyDesc = "Moderate";
+                if (aqiValue != null) {
+                    if (aqiValue > tolerance) energyDesc = "Draining";
+                    else if (aqiValue > tolerance - 20) energyDesc = "Moderate";
+                }
 
+                setEnvData(environment);
                 setUserData({
                     userName: profileData?.name || "Traveler",
-                    persona,
+                    persona: profileData?.persona || { name: "Traveler", desc: "Your journey has just begun." },
                     locationName: locationString,
-                    currentAQI: aqiValue,
-                    temperature: envData?.temperature || 24,
-                    humidity: envData?.humidity || 65,
                     energyText: energyDesc
                 });
             } catch (e) {
@@ -129,11 +148,25 @@ const Dashboard = () => {
 
     if (!userData) return null;
 
+    const aqiStatus = getAQIStatus(envData?.aqi);
+
+    const metrics = [
+        { icon: Gauge, label: 'AQI', value: envData?.aqi, unit: '', colorClass: 'text-blue-400' },
+        { icon: Thermometer, label: 'Temp', value: envData?.temperature, unit: '°C', colorClass: 'text-amber-400' },
+        { icon: Droplets, label: 'Humidity', value: envData?.humidity, unit: '%', colorClass: 'text-cyan-400' },
+        { icon: Wind, label: 'Wind', value: envData?.wind_speed, unit: ' km/h', colorClass: 'text-teal-400' },
+        { icon: Zap, label: 'UV Index', value: envData?.uv_index, unit: '', colorClass: 'text-yellow-400' },
+        { icon: CloudRain, label: 'PM2.5', value: envData?.pm2_5, unit: ' μg/m³', colorClass: 'text-rose-400' },
+        { icon: Flame, label: 'PM10', value: envData?.pm10, unit: ' μg/m³', colorClass: 'text-orange-400' },
+        { icon: Eye, label: 'Ozone', value: envData?.ozone, unit: ' μg/m³', colorClass: 'text-purple-400' },
+        { icon: FlaskConical, label: 'NO₂', value: envData?.nitrogen_dioxide, unit: ' μg/m³', colorClass: 'text-pink-400' },
+    ];
+
     return (
         <Layout>
             <div className={`p-4 md:p-8 min-h-screen ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                 {/* Header Greeting */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <div>
                         <h1 className="text-3xl font-bold flex items-center gap-2">
                             Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500">{userData.userName}</span>
@@ -141,6 +174,11 @@ const Dashboard = () => {
                         <p className={`flex items-center gap-2 mt-2 font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                             <Map className="w-4 h-4" />
                             {userData.locationName}
+                            {envData?.aqi != null && (
+                                <span className={`ml-2 text-xs font-bold px-2 py-0.5 rounded-full border ${isDarkMode ? 'border-white/10 bg-white/5' : 'border-gray-200 bg-white'} ${aqiStatus.color}`}>
+                                    AQI {envData.aqi} · {aqiStatus.label}
+                                </span>
+                            )}
                         </p>
                     </div>
 
@@ -161,63 +199,24 @@ const Dashboard = () => {
                     </button>
                 </div>
 
-                {/* Environmental Metrics Row */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-                    <GlassCard className="p-4 flex items-center gap-3" hoverEffect={false}>
-                        <div className={`p-2.5 rounded-xl ${isDarkMode ? 'bg-blue-500/20' : 'bg-blue-50'}`}>
-                            <Wind className={`w-5 h-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
-                        </div>
-                        <div>
-                            <div className={`text-xs uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>AQI</div>
-                            <div className="font-bold text-lg">{userData.currentAQI || 42}</div>
-                        </div>
-                    </GlassCard>
-                    <GlassCard className="p-4 flex items-center gap-3" hoverEffect={false}>
-                        <div className={`p-2.5 rounded-xl ${isDarkMode ? 'bg-amber-500/20' : 'bg-amber-50'}`}>
-                            <Thermometer className={`w-5 h-5 ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`} />
-                        </div>
-                        <div>
-                            <div className={`text-xs uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Temp</div>
-                            <div className="font-bold text-lg">{userData.temperature}°C</div>
-                        </div>
-                    </GlassCard>
-                    <GlassCard className="p-4 flex items-center gap-3" hoverEffect={false}>
-                        <div className={`p-2.5 rounded-xl ${isDarkMode ? 'bg-cyan-500/20' : 'bg-cyan-50'}`}>
-                            <Droplets className={`w-5 h-5 ${isDarkMode ? 'text-cyan-400' : 'text-cyan-600'}`} />
-                        </div>
-                        <div>
-                            <div className={`text-xs uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Humidity</div>
-                            <div className="font-bold text-lg">{userData.humidity}%</div>
-                        </div>
-                    </GlassCard>
-                    <GlassCard className="p-4 flex items-center gap-3" hoverEffect={false}>
-                        <div className={`p-2.5 rounded-xl ${isDarkMode ? 'bg-purple-500/20' : 'bg-purple-50'}`}>
-                            <Zap className={`w-5 h-5 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`} />
-                        </div>
-                        <div>
-                            <div className={`text-xs uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Energy</div>
-                            <div className="font-bold text-lg">{userData.energyText}</div>
-                        </div>
-                    </GlassCard>
+                {/* Environmental Metrics Grid — all 9 params */}
+                <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-3 mb-8">
+                    {metrics.map((m) => (
+                        <MetricCard key={m.label} {...m} isDarkMode={isDarkMode} />
+                    ))}
                 </div>
 
-                {/* Main Grid: Environmental News & Maps */}
+                {/* Main Grid: News & Insights */}
                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-
                     {/* Left Column: News Section */}
-                    <div className="xl:col-span-8">
+                    <div className="xl:col-span-9">
                         <NewsSection isDarkMode={isDarkMode} />
                     </div>
 
-                    {/* Right Column: Existing Map and Insights */}
-                    <div className="xl:col-span-4 space-y-6">
-                        <div>
-                            <h2 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Live Activity Map</h2>
-                            <MapWidget locations={RECOMMENDATIONS} />
-                        </div>
+                    {/* Right Column: Insights */}
+                    <div className="xl:col-span-3 space-y-6">
                         <DailyInsight />
                     </div>
-
                 </div>
 
                 {/* Laws & Agreements Full Width Section */}

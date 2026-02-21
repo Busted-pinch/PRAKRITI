@@ -15,10 +15,10 @@ def get_supabase_client() -> Client:
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """
     Validates the Bearer token using Supabase Auth.
+    Raises HTTP 401 if the token is missing or invalid.
     """
-    if not credentials:
-        from types import SimpleNamespace
-        return SimpleNamespace(id="00000000-0000-0000-0000-000000000000", email="demo@example.com", user_metadata={"full_name": "Demo Traveler"})
+    if not credentials or not credentials.credentials:
+        raise HTTPException(status_code=401, detail="Not authenticated. Please log in.")
         
     token = credentials.credentials
     supabase = get_supabase_client()
@@ -26,12 +26,9 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     try:
         user = supabase.auth.get_user(token)
         if not user or not user.user:
-             # Fallback to dummy user for local hackathon development if Supabase token is invalid
-             from types import SimpleNamespace
-             return SimpleNamespace(id="00000000-0000-0000-0000-000000000000", email="demo@example.com", user_metadata={"full_name": "Demo Traveler"})
+            raise HTTPException(status_code=401, detail="Invalid or expired token.")
         return user.user
+    except HTTPException:
+        raise
     except Exception as e:
-        # Fallback to dummy user for local hackathon development
-        from types import SimpleNamespace
-        return SimpleNamespace(id="00000000-0000-0000-0000-000000000000", email="demo@example.com", user_metadata={"full_name": "Demo Traveler"})
-
+        raise HTTPException(status_code=401, detail=f"Authentication failed: {str(e)}")
