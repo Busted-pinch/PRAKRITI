@@ -34,7 +34,7 @@ const NewsSection = ({ isDarkMode }) => {
                     <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-blue-500/20' : 'bg-blue-50'}`}>
                         <Newspaper className={`w-6 h-6 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
                     </div>
-                    Environmental Intelligence
+                    What's Happening Around You
                 </h2>
 
                 <button

@@ -11,21 +11,36 @@ from src.schemas.ngo import NGOEventResponse
 try:
     from sentence_transformers import SentenceTransformer
     has_st = True
-    # Initialize the model at the module level so it's loaded only once
-    embedder = SentenceTransformer('all-MiniLM-L6-v2')
 except ImportError:
     has_st = False
-    embedder = None
+
+# Lazily initialized — loaded on first use to avoid crashing at startup
+# if HuggingFace is unreachable or the model isn't cached locally.
+embedder = None
+
+def _get_embedder():
+    """Return the SentenceTransformer model, initializing it on first call."""
+    global embedder
+    if not has_st:
+        return None
+    if embedder is None:
+        try:
+            embedder = SentenceTransformer('all-MiniLM-L6-v2')
+        except Exception as e:
+            print(f"WARNING: Could not load SentenceTransformer model: {e}")
+            return None
+    return embedder
 
 async def get_embedding(text: str) -> list[float]:
     """Generates embedding using sentence-transformers (all-MiniLM-L6-v2)."""
-    if not has_st or embedder is None:
-        print("WARNING: sentence-transformers not found. Returning fake embedding.")
+    model = _get_embedder()
+    if model is None:
+        print("WARNING: SentenceTransformer unavailable. Returning zero embedding.")
         return [0.0] * 384
     
     try:
         # Convert numpy array to list of floats
-        embedding = embedder.encode(text).tolist()
+        embedding = model.encode(text).tolist()
         return embedding
     except Exception as e:
         print(f"Error generating embedding: {e}")

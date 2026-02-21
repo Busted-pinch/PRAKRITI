@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Wind, Map,
+    Wind, Map, Scale,
     Droplets, Thermometer,
     Leaf, Zap, Eye, Gauge, CloudRain, FlaskConical, Flame
 } from 'lucide-react';
@@ -212,6 +212,94 @@ const MetricCard = ({ icon: Icon, label, value, unit, colorClass, isDarkMode }) 
     );
 };
 
+/* ─── Tab Section ────────────────────────────────────────────
+   Browser-style horizontal tab bar that collapses all three
+   content sections: Environmental Intelligence, Laws & Agreements,
+   and NGOs Around Me.  Card internals are 100% untouched.
+──────────────────────────────────────────────────────────── */
+const TAB_DEFS = [
+    {
+        id: 'env', label: "What's Happening Around You", Icon: Leaf
+    },
+    { id: 'laws', label: 'Laws & Agreements', Icon: Scale },
+    { id: 'ngo', label: 'NGOs Around Me', Icon: Map },
+];
+
+const TabSection = ({ isDarkMode, userData }) => {
+    const [activeTab, setActiveTab] = useState('env');
+
+    /* colours for the active indicator */
+    const accentGrad = 'from-emerald-500 to-teal-400';
+    const accentText = isDarkMode ? 'text-emerald-400' : 'text-emerald-600';
+
+    return (
+        <div className="mt-2">
+            {/* ── Tab Strip ───────────────────────────────────────── */}
+            <div
+                className={`relative flex items-stretch rounded-2xl overflow-hidden border
+                    ${isDarkMode
+                        ? 'bg-white/[0.04] border-white/10 backdrop-blur-md'
+                        : 'bg-white border-gray-200 shadow-sm'}`}
+            >
+                {TAB_DEFS.map(({ id, label, Icon }) => {
+                    const isActive = activeTab === id;
+                    return (
+                        <button
+                            key={id}
+                            onClick={() => setActiveTab(id)}
+                            className={`relative flex-1 flex items-center justify-center gap-2 px-4 py-3.5
+                                text-sm font-semibold tracking-wide transition-all duration-200 focus:outline-none
+                                ${isActive
+                                    ? accentText
+                                    : isDarkMode
+                                        ? 'text-gray-400 hover:text-gray-200'
+                                        : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                        >
+                            <Icon className="w-4 h-4 flex-shrink-0" />
+                            <span className="hidden sm:inline">{label}</span>
+                            {/* Active underline bar */}
+                            {isActive && (
+                                <motion.span
+                                    layoutId="tab-indicator"
+                                    className={`absolute bottom-0 left-0 right-0 h-[2.5px] rounded-t-full bg-gradient-to-r ${accentGrad}`}
+                                    transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                                />
+                            )}
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* ── Tab Panels ──────────────────────────────────────── */}
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.22, ease: 'easeOut' }}
+                    className="mt-6"
+                >
+                    {activeTab === 'env' && (
+                        <NewsSection isDarkMode={isDarkMode} />
+                    )}
+
+                    {activeTab === 'laws' && (
+                        <LawPolicySection isDarkMode={isDarkMode} />
+                    )}
+
+                    {activeTab === 'ngo' && (
+                        <div className="mb-16 px-4">
+                            <NgoEvents locality={userData.locationName.split(',')[0]} />
+                        </div>
+                    )}
+                </motion.div>
+            </AnimatePresence>
+        </div>
+    );
+};
+
 const Dashboard = () => {
     const { isDarkMode } = useTheme();
     const { environmentalMode, setEnvironmentalMode } = useEnvironment();
@@ -350,25 +438,15 @@ const Dashboard = () => {
                     </button>
                 </div>
 
-                {/* Environmental Metrics Grid — all 9 params */}
-                <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-3 mb-8">
+                {/* Environmental Metrics Grid — always visible, independent of tabs */}
+                <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-3 mb-6">
                     {metrics.map((m) => (
                         <MetricCard key={m.label} {...m} isDarkMode={isDarkMode} />
                     ))}
                 </div>
 
-                {/* News Section — full width */}
-                <NewsSection isDarkMode={isDarkMode} />
-
-                {/* Laws & Agreements Full Width Section */}
-                <div className="mt-8 mb-8">
-                    <LawPolicySection isDarkMode={isDarkMode} />
-                </div>
-
-                {/* NGO Events Section */}
-                <div className="mt-8 mb-16 px-4">
-                    <NgoEvents locality={userData.locationName.split(',')[0]} />
-                </div>
+                {/* ── Tab Bar ─────────────────────────────────────────────── */}
+                <TabSection isDarkMode={isDarkMode} userData={userData} />
             </div>
         </Layout>
     );
