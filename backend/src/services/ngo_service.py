@@ -1,5 +1,6 @@
 import os
 import json
+import math
 import httpx
 from datetime import datetime
 from uuid import uuid4
@@ -149,6 +150,15 @@ async def get_recommended_ngo_events(user_id: str, locality: str) -> dict:
 
         if events:
             # Map back to schemas
+            def safe_float(val):
+                """Return None if val is NaN/Inf, else return val."""
+                if val is None:
+                    return None
+                try:
+                    return val if math.isfinite(val) else None
+                except (TypeError, ValueError):
+                    return None
+
             mapped_events = []
             for e in events:
                 mapped_events.append(NGOEventResponse(
@@ -156,8 +166,8 @@ async def get_recommended_ngo_events(user_id: str, locality: str) -> dict:
                     ngo_name=e.get("ngo_name", ""),
                     event_title=e.get("event_title", ""),
                     description=e.get("description"),
-                    location=e.get("location"), # Not returned by RPC unless updated, but works
-                    similarity=e.get("similarity")
+                    location=e.get("location"),
+                    similarity=safe_float(e.get("similarity"))
                 ))
             return {"events": mapped_events, "source": "database"}
         

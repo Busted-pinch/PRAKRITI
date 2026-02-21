@@ -66,7 +66,7 @@ const NewsSection = ({ isDarkMode }) => {
                     <p>No highly relevant news found for your profile right now.</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     {news.map((article, index) => (
                         <NewsCard key={index} article={article} isDarkMode={isDarkMode} />
                     ))}
