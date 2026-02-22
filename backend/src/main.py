@@ -32,6 +32,8 @@ app = FastAPI(title="Techathon 3.0 PRAKRITI Backend",
 
 # CORS Configuration
 origins = [
+    "*", 
+    "https://prakriti-teal.vercel.app/",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]

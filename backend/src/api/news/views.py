@@ -5,7 +5,7 @@ import json
 
 from src.api.deps import get_current_user
 from src.core.aggregate_data import AggregateData
-from src.services.news_service import news_service, CACHE_KEY
+from src.services.news_service import news_service, CACHE_KEY_PREFIX
 from src.core.supabase_client import supabase
 from src.core.cache import get_cache
 from src.langgraph.agents.news_agent import process_news_for_user
@@ -23,7 +23,10 @@ class NewsResponse(BaseModel):
     articles: List[NewsItem]
 
 @router.get("/personalized", response_model=NewsResponse)
-async def get_personalized_news(current_user: dict = Depends(get_current_user)):
+async def get_personalized_news(
+    location: str = "global", 
+    current_user: dict = Depends(get_current_user)
+):
     user_id = current_user.get("sub") or current_user.get("id") if isinstance(current_user, dict) else current_user.id
     
     # 1. Get user profile
@@ -48,14 +51,17 @@ async def get_personalized_news(current_user: dict = Depends(get_current_user)):
     }
 
     # 3. Ingest News if not cached
-    if not await get_cache(CACHE_KEY):
-        print("News cache missing, triggering background ingestion...")
-        await news_service.fetch_and_ingest_news()
+    location_key = location.lower().replace(" ", "_")
+    cache_key = f"{CACHE_KEY_PREFIX}_{location_key}"
+    if not await get_cache(cache_key):
+        print(f"News cache missing for {location}, triggering background ingestion...")
+        await news_service.fetch_and_ingest_news(location_focus=location)
 
     # 4. RAG Semantic Search
     try:
         # Create a semantic string representing what this user cares about
-        user_query = f"User Persona: {profile_data['persona']['name']}. " \
+        location_prefix = "Global Context" if location.lower() == "global" else f"Local Context ({location})"
+        user_query = f"{location_prefix}. User Persona: {profile_data['persona']['name']}. " \
                      f"Health conditions: {', '.join(profile_data['diseases'])}. " \
                      f"Constraints: {json.dumps(profile_data['constraints'])}. " \
                      f"Hobbies: {', '.join(profile_data['hobbies'])}."

@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Activity, Wind, Map, User, Heart, Shield,
+
     Leaf, Zap, Dumbbell, AlertTriangle, Edit3,
     Gauge, Droplets, Eye, Flame, FlaskConical, CloudRain,
-    BookOpen, Scale, HeartHandshake
+    BookOpen, Scale, HeartHandshake, Check
 } from 'lucide-react';
 import {
     ResponsiveContainer, RadarChart, PolarGrid,
@@ -17,6 +18,7 @@ import { useEnvironment } from '../context/EnvironmentContext';
 import GlassCard from '../components/GlassCard';
 import Layout from '../components/Layout';
 import Achievements from '../components/Achievements';
+import Leaderboard from '../components/Leaderboard';
 import api from '../services/api';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -337,20 +339,22 @@ const Profile = () => {
                                 <Heart className={`w-5 h-5 ${isDarkMode ? 'text-rose-400' : 'text-rose-600'}`} />
                                 <h3 className="font-semibold text-lg">Hobbies</h3>
                             </div>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-2 flex-grow">
                                 {userData.hobbies.length > 0 ? userData.hobbies.map((h, i) => (
                                     <span key={i} className={`px-3 py-1 rounded-full text-xs font-medium ${isDarkMode ? 'bg-white/10 text-gray-300' : 'bg-emerald-50 text-emerald-700'}`}>{h}</span>
                                 )) : <span className="text-sm text-gray-500">No hobbies added</span>}
                             </div>
                         </GlassCard>
 
-                        {/* Interests */}
-                        <GlassCard className="p-6" hoverEffect={false}>
-                            <div className="flex items-center gap-2 mb-4">
-                                <Leaf className={`w-5 h-5 ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
-                                <h3 className="font-semibold text-lg">Interests</h3>
+                        {/* Interests Card */}
+                        <GlassCard className="p-6 h-full flex flex-col" hoverEffect={true}>
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-emerald-500/20' : 'bg-emerald-100'}`}>
+                                    <Leaf className={`w-5 h-5 ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                                </div>
+                                <h3 className="font-bold text-lg">Interests</h3>
                             </div>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-2 flex-grow">
                                 {userData.interests.length > 0 ? userData.interests.map((interest, i) => (
                                     <span key={i} className={`px-3 py-1 rounded-full text-xs font-medium ${isDarkMode ? 'bg-white/10 text-gray-300' : 'bg-teal-50 text-teal-700'}`}>{interest}</span>
                                 )) : <span className="text-sm text-gray-500">No interests added</span>}
@@ -363,29 +367,55 @@ const Profile = () => {
                                 <Shield className={`w-5 h-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
                                 <h3 className="font-semibold text-lg">Health Profile</h3>
                             </div>
-                            <div className="space-y-3">
-                                <div className="flex items-center gap-2">
-                                    <Dumbbell className={`w-4 h-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-                                    <span className="text-sm">Physical Intensity: </span>
-                                    <span className={`text-sm font-bold capitalize ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
-                                        {userData.constraints?.max_physical_intensity || 'Medium'}
-                                    </span>
+                            <div className="space-y-4">
+                                <div>
+                                    <div className="flex justify-between text-sm mb-2">
+                                        <span className="opacity-70">Intensity Level</span>
+                                        <span className={`font-bold capitalize ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                                            {userData.constraints?.max_physical_intensity || 'Medium'}
+                                        </span>
+                                    </div>
+                                    <div className={`h-2 rounded-full ${isDarkMode ? 'bg-white/10' : 'bg-gray-100'}`}>
+                                        <div
+                                            className="h-full bg-emerald-500 rounded-full"
+                                            style={{ width: userData.constraints?.max_physical_intensity === 'high' ? '100%' : userData.constraints?.max_physical_intensity === 'med' ? '66%' : '33%' }}
+                                        />
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <Wind className={`w-4 h-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-                                    <span className="text-sm">AQI Sensitivity: </span>
-                                    <span className={`text-sm font-bold capitalize ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                                <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10 text-gray-400' : 'bg-blue-50/50 border-blue-100/50 text-blue-800'} text-xs leading-relaxed`}>
+                                    Tailoring exercise durations and intensity recommendations based on this profile.
+                                </div>
+                            </div>
+                        </GlassCard>
+
+                        {/* Health Profile Card */}
+                        <GlassCard className="p-6 h-full" hoverEffect={true}>
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-amber-500/20' : 'bg-amber-100'}`}>
+                                    <Shield className={`w-5 h-5 ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`} />
+                                </div>
+                                <h3 className="font-bold text-lg">Health Guard</h3>
+                            </div>
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="opacity-70">AQI Sensitivity</span>
+                                    <span className={`font-bold capitalize ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
                                         {userData.constraints?.aqi_sensitivity || 'Medium'}
                                     </span>
                                 </div>
-                                {userData.diseases.length > 0 && (
-                                    <div className="flex items-start gap-2 mt-2">
-                                        <AlertTriangle className={`w-4 h-4 mt-0.5 ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`} />
-                                        <div className="flex flex-wrap gap-1">
+                                {userData.diseases.length > 0 ? (
+                                    <div className="space-y-2">
+                                        <p className="text-xs font-semibold opacity-50 uppercase tracking-wider">Conditions & Risks</p>
+                                        <div className="flex flex-wrap gap-1.5">
                                             {userData.diseases.map((d, i) => (
                                                 <span key={i} className={`px-2 py-0.5 rounded text-xs ${isDarkMode ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-50 text-amber-700'}`}>{d}</span>
                                             ))}
                                         </div>
+                                    </div>
+                                ) : (
+                                    <div className={`p-3 rounded-xl flex items-center gap-3 ${isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'} text-xs font-semibold`}>
+                                        <Check className="w-4 h-4" />
+                                        No chronic conditions reported.
                                     </div>
                                 )}
                             </div>
@@ -476,7 +506,35 @@ const Profile = () => {
                                 exit={{ scale: 0.95 }}
                                 className={`w-full max-w-lg rounded-2xl p-6 ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} shadow-2xl overflow-y-auto max-h-[90vh]`}
                             >
-                                <h2 className="text-2xl font-bold mb-6">Edit Profile</h2>
+                                <h2 className="text-2xl font-bold mb-2">Edit Profile</h2>
+                                <p className={`text-sm mb-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    Update your details manually or retake the assessment for a fresh analysis.
+                                </p>
+
+                                <div className="mb-8">
+                                    <button
+                                        onClick={() => navigate('/assessment')}
+                                        className="w-full py-4 rounded-xl border-2 border-dashed border-emerald-500/30 hover:border-emerald-500 hover:bg-emerald-500/5 transition-all flex flex-col items-center gap-2 group"
+                                    >
+                                        <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 group-hover:scale-110 transition-transform">
+                                            <Activity className="w-6 h-6" />
+                                        </div>
+                                        <div className="text-center">
+                                            <span className="block font-bold text-emerald-500 text-lg">Retake Assessment</span>
+                                            <span className="text-xs opacity-60">Redefine your nature persona through guided questions</span>
+                                        </div>
+                                    </button>
+                                </div>
+
+                                <div className="relative mb-8">
+                                    <div className="absolute inset-0 flex items-center">
+                                        <div className={`w-full border-t ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`} />
+                                    </div>
+                                    <div className="relative flex justify-center text-xs uppercase">
+                                        <span className={`px-4 font-bold tracking-widest ${isDarkMode ? 'bg-gray-800 text-gray-500' : 'bg-white text-gray-400'}`}>Or Manual Update</span>
+                                    </div>
+                                </div>
+
                                 <div className="space-y-4">
                                     <div>
                                         <label className="block text-sm font-medium mb-1">Name</label>

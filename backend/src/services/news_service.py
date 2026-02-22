@@ -11,7 +11,7 @@ from src.core.supabase_client import supabase
 # We will lazy-load the embedding model so it doesn't block the backend startup
 embedding_model = None
 
-CACHE_KEY = "global_enriched_news_v1"
+CACHE_KEY_PREFIX = "enriched_news_v2"
 CACHE_TTL = 3600  # 1 hour
 
 GENERIC_NEWS_PROMPT = """You are an Environmental Intelligence Assistant.
@@ -45,10 +45,10 @@ class NewsService:
             print(f"Error generating local embedding: {e}")
             return []
 
-    async def fetch_and_ingest_news(self) -> bool:
+    async def fetch_and_ingest_news(self, location_focus: str = "global") -> bool:
         """Fetches from Tavily, enriches via LLM, embeds, and stores in Supabase."""
         # 1. Fetch from Tavily Service
-        extracted_news = tavily_service.search_news()
+        extracted_news = tavily_service.search_news(location_focus=location_focus)
         
         if not extracted_news:
             return []
@@ -82,7 +82,8 @@ class NewsService:
         if enriched_news:
             for item in enriched_news:
                 # Create a rich text representation for the embedding
-                combined_text = f"Headline: {item.get('headline', '')}\nSummary: {item.get('summary_simple', '')}\nImpact: {item.get('why_it_matters', '')}"
+                location_prefix = "Global News" if location_focus.lower() == "global" else f"Local News ({location_focus})"
+                combined_text = f"Context: {location_prefix}\nHeadline: {item.get('headline', '')}\nSummary: {item.get('summary_simple', '')}\nImpact: {item.get('why_it_matters', '')}"
                 embedding = self.get_embedding(combined_text)
                 
                 if embedding:
@@ -109,7 +110,8 @@ class NewsService:
                         print(f"Error inserting news to Supabase: {e}")
                         
             # Update cache to prevent spamming Tavily
-            await set_cache(CACHE_KEY, "ingested", ttl=CACHE_TTL)
+            cache_key = f"{CACHE_KEY_PREFIX}_{location_focus.lower().replace(' ', '_')}"
+            await set_cache(cache_key, "ingested", ttl=CACHE_TTL)
             return True
         return False
 
