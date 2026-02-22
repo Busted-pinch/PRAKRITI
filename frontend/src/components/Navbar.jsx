@@ -10,6 +10,7 @@ import { useLanguage } from '../context/LanguageContext';
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const [selectedLanguage, setSelectedLanguage] = useState('');
     const location = useLocation();
     const { isDarkMode, toggleTheme } = useTheme();
     const { environmentalMode, setEnvironmentalMode } = useEnvironment();
@@ -24,6 +25,16 @@ const Navbar = () => {
         };
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    // Set initial language from Google Translate cookie
+    useEffect(() => {
+        const match = document.cookie.match(/googtrans=\/[^\/]+\/([^;]+)/);
+        if (match && match[1] && match[1] !== 'en') {
+            setSelectedLanguage(match[1]);
+        } else {
+            setSelectedLanguage('');
+        }
     }, []);
 
     // Close mobile menu on route change
@@ -142,8 +153,10 @@ const Navbar = () => {
                         )}
 
                         <select
+                            value={selectedLanguage}
                             onChange={(e) => {
                                 const language = e.target.value;
+                                setSelectedLanguage(language);
                                 const select = document.querySelector(".goog-te-combo");
                                 if (select) {
                                     select.value = language || 'en';
@@ -156,9 +169,13 @@ const Navbar = () => {
                                     window.location.reload();
                                 }
                             }}
-                            className={`p-1.5 md:p-2 rounded-lg border transition-colors text-xs md:text-sm font-medium ${isDarkMode
-                                ? 'bg-gray-800 border-gray-700 text-gray-300 hover:text-white'
-                                : 'bg-white border-gray-200 text-gray-600 hover:text-gray-900'
+                            className={`p-1.5 md:p-2 rounded-lg border transition-all duration-300 text-xs md:text-sm font-semibold cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500/50 ${isDarkMode
+                                    ? selectedLanguage
+                                        ? 'bg-gray-800 border-emerald-500/30 text-emerald-400'
+                                        : 'bg-transparent border-gray-700 text-gray-300 hover:text-white hover:bg-gray-800'
+                                    : selectedLanguage
+                                        ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
+                                        : 'bg-transparent border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                                 }`}
                         >
                             <option value="">Translate</option>
