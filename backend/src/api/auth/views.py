@@ -99,4 +99,3 @@ async def me(current_user: dict = Depends(get_current_user)):
             "profile": None,
             "error": str(e)
          }
-
