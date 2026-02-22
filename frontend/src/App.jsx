@@ -12,7 +12,6 @@ import Contact from './pages/Contact';
 import AiCompanion from './pages/AiCompanion';
 import Profile from './pages/Profile';
 import './index.css';
-import PrakritiMapPage from "./pages/PrakritiMapPage";
 
 
 import { EnvironmentProvider } from './context/EnvironmentContext';
@@ -35,49 +34,39 @@ function App() {
                 <Navbar />
                 <AnimatePresence mode="wait">
                   <Routes>
-  <Route path="/" element={<LandingPage />} />
-  <Route path="/login" element={<Login />} />
-  <Route path="/signup" element={<Signup />} />
-  <Route path="/about" element={<About />} />
-  <Route path="/contact" element={<Contact />} />
-  <Route path="/companion" element={<AiCompanion />} />
+                    <Route path="/" element={<LandingPage />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/signup" element={<Signup />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/contact" element={<Contact />} />
+                    <Route path="/companion" element={<AiCompanion />} />
 
-  {/* Protected Routes */}
-  <Route
-    path="/dashboard"
-    element={
-      <ProtectedRoute>
-        <Dashboard />
-      </ProtectedRoute>
-    }
-  />
-  <Route
-    path="/assessment"
-    element={
-      <ProtectedRoute>
-        <Questionnaire />
-      </ProtectedRoute>
-    }
-  />
-  <Route
-    path="/profile"
-    element={
-      <ProtectedRoute>
-        <Profile />
-      </ProtectedRoute>
-    }
-  />
-
-  {/* PRAKRITI MAP */}
-  <Route
-    path="/map"
-    element={
-      <ProtectedRoute>
-        <PrakritiMapPage />
-      </ProtectedRoute>
-    }
-  />
-</Routes>
+                    {/* Protected Routes */}
+                    <Route
+                      path="/dashboard"
+                      element={
+                        <ProtectedRoute>
+                          <Dashboard />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/assessment"
+                      element={
+                        <ProtectedRoute>
+                          <Questionnaire />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/profile"
+                      element={
+                        <ProtectedRoute>
+                          <Profile />
+                        </ProtectedRoute>
+                      }
+                    />
+                  </Routes>
                 </AnimatePresence>
                 <ChatWidget />
               </div>
@@ -90,5 +79,3 @@ function App() {
 }
 
 export default App;
-
-

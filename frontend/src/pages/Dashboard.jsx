@@ -18,7 +18,6 @@ import api from '../services/api';
 import ContextualBriefing from '../components/ContextualBriefing';
 import EmotionalUX from '../components/EmotionalUX';
 
-
 // --- Helper Functions ---
 const calculatePersona = (constraints) => {
     const intensity = constraints?.max_physical_intensity || 'med';
@@ -470,36 +469,21 @@ const Dashboard = () => {
                         </div>
                     </div>
 
-                    {/* Actions Row */}
-                    <div className="flex items-center gap-3">
-                        {/* Open Map Button */}
-                        <button
-                            onClick={() => navigate('/map')}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all hover:scale-105 active:scale-95 ${isDarkMode
-                                ? 'bg-teal-500/10 border-teal-500/40 text-teal-400 hover:bg-teal-500/20'
-                                : 'bg-teal-50 border-teal-200 text-teal-600 hover:bg-teal-100'
-                                }`}
-                        >
-                            <Map className="w-3.5 h-3.5" />
-                            <span className="text-xs font-bold uppercase tracking-wider">Open Map</span>
-                        </button>
-
-                        {/* Environmental Mode Toggle */}
-                        <button
-                            onClick={() => setEnvironmentalMode(!environmentalMode)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${environmentalMode
-                                ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-500'
-                                : isDarkMode
-                                    ? 'bg-white/5 border-white/10 text-gray-400'
-                                    : 'bg-white border-gray-200 text-gray-500'
-                                }`}
-                        >
-                            <div className={`w-2 h-2 rounded-full ${environmentalMode ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
-                            <span className="text-xs font-bold uppercase tracking-wider">
-                                {environmentalMode ? 'INT Mode: ON' : 'INT Mode: OFF'}
-                            </span>
-                        </button>
-                    </div>
+                    {/* Environmental Mode Toggle */}
+                    <button
+                        onClick={() => setEnvironmentalMode(!environmentalMode)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${environmentalMode
+                            ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-500'
+                            : isDarkMode
+                                ? 'bg-white/5 border-white/10 text-gray-400'
+                                : 'bg-white border-gray-200 text-gray-500'
+                            }`}
+                    >
+                        <div className={`w-2 h-2 rounded-full ${environmentalMode ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+                        <span className="text-xs font-bold uppercase tracking-wider">
+                            {environmentalMode ? 'INT Mode: ON' : 'INT Mode: OFF'}
+                        </span>
+                    </button>
                 </div>
 
                 {/* AI Insight Cards — Daily Briefing + Emotional UX */}
