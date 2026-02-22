@@ -18,6 +18,7 @@ from src.api.news.views import router as news_router
 from src.api.law.views import router as law_router
 from src.api.ngo.views import router as ngo_router
 from src.api.dashboard.views import router as dashboard_router
+from src.api.rewards.views import router as rewards_router
 
 
 
@@ -60,6 +61,7 @@ app.include_router(news_router, prefix="/news", tags=["News Intelligence"])
 app.include_router(law_router, prefix="/law", tags=["Law & Policy"])
 app.include_router(ngo_router, prefix="/ngo", tags=["NGO Events"])
 app.include_router(dashboard_router, prefix="/dashboard", tags=["Dashboard"])
+app.include_router(rewards_router, prefix="/rewards", tags=["Rewards"])
 
 
 @app.on_event("startup")
