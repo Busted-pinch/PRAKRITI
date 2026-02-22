@@ -54,6 +54,14 @@ function App() {
                         }
                       />
                       <Route
+                        path="/map"
+                        element={
+                          <ProtectedRoute>
+                            <PrakritiMapPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
                         path="/assessment"
                         element={
                           <ProtectedRoute>
