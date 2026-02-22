@@ -156,9 +156,9 @@ const Navbar = () => {
                                     window.location.reload();
                                 }
                             }}
-                            className={`p-1.5 md:p-2 rounded-lg border transition-colors text-xs md:text-sm font-medium ${isDarkMode
-                                ? 'bg-gray-800 border-gray-700 text-gray-300 hover:text-white'
-                                : 'bg-white border-gray-200 text-gray-600 hover:text-gray-900'
+                            className={`py-1.5 md:py-2 px-3 md:px-4 rounded-xl transition-all font-bold text-xs md:text-sm tracking-wide cursor-pointer outline-none focus:ring-2 focus:ring-emerald-500/50 shadow-sm border ${isDarkMode
+                                ? 'bg-gradient-to-r from-gray-800 to-gray-900 border-emerald-500/30 text-emerald-400 hover:border-emerald-500/60'
+                                : 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 text-emerald-700 hover:border-emerald-400'
                                 }`}
                         >
                             <option value="">Translate</option>
