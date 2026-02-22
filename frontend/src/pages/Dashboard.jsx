@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useEnvironment } from '../context/EnvironmentContext';
+import { useLanguage } from '../context/LanguageContext';
 import GlassCard from '../components/GlassCard';
 import Layout from '../components/Layout';
 
@@ -146,7 +147,7 @@ const MetricModal = ({ metric, onClose, isDarkMode }) => {
                         {/* ── AI Insight section ── */}
                         <div className="space-y-4">
                             <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-white/[0.04] border border-white/8' : 'bg-gray-50 border border-gray-100'}`}>
-                                <p className={`text-[11px] font-bold uppercase tracking-widest mb-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>What This Means for You</p>
+                                <p className={`text-[11px] font-bold uppercase tracking-widest mb-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{metric.t('dashboard', 'whatThisMeans')}</p>
                                 {insight ? (
                                     <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>{insight}</p>
                                 ) : (
@@ -158,7 +159,7 @@ const MetricModal = ({ metric, onClose, isDarkMode }) => {
                         </div>
 
                         <p className={`mt-4 text-center text-[10px] ${isDarkMode ? 'text-gray-700' : 'text-gray-300'}`}>
-                            Press ESC or tap outside to close
+                            {metric.t('dashboard', 'closeLabel')}
                         </p>
                     </div>
                 </motion.div>
@@ -167,9 +168,9 @@ const MetricModal = ({ metric, onClose, isDarkMode }) => {
     );
 };
 
-const MetricCard = ({ icon: Icon, label, value, unit, colorClass, isDarkMode, insight, actionKey }) => {
+const MetricCard = ({ icon: Icon, label, value, unit, colorClass, isDarkMode, insight, actionKey, t }) => {
     const [open, setOpen] = useState(false);
-    const metric = { icon: Icon, label, value, unit, colorClass, insight };
+    const metric = { icon: Icon, label, value, unit, colorClass, insight, t };
 
     // Extract a raw hex/rgba for the box-shadow glow (simpler than Tailwind dynamic classes)
     const glowColor = colorClass.includes('blue') ? 'rgba(59,130,246,0.35)'
@@ -228,16 +229,14 @@ const MetricCard = ({ icon: Icon, label, value, unit, colorClass, isDarkMode, in
    content sections: Environmental Intelligence, Laws & Agreements,
    and NGOs Around Me.  Card internals are 100% untouched.
 ──────────────────────────────────────────────────────────── */
-const TAB_DEFS = [
-    {
-        id: 'env', label: "What's Happening Around You", Icon: Leaf
-    },
-    { id: 'laws', label: 'Laws & Agreements', Icon: Scale },
-    { id: 'ngo', label: 'NGOs Around Me', Icon: Map },
-];
-
-const TabSection = ({ isDarkMode, userData }) => {
+const TabSection = ({ isDarkMode, userData, t }) => {
     const [activeTab, setActiveTab] = useState('env');
+
+    const TAB_DEFS = [
+        { id: 'env', label: t('dashboard', 'tabNews'), Icon: Leaf },
+        { id: 'laws', label: t('dashboard', 'tabLaws'), Icon: Scale },
+        { id: 'ngo', label: t('dashboard', 'tabNgos'), Icon: Map },
+    ];
 
     const handleTabChange = (id) => {
         setActiveTab(id);
@@ -319,6 +318,7 @@ const TabSection = ({ isDarkMode, userData }) => {
 const Dashboard = () => {
     const { isDarkMode } = useTheme();
     const { environmentalMode, setEnvironmentalMode } = useEnvironment();
+    const { t } = useLanguage();
     const [userData, setUserData] = useState(null);
     const [envData, setEnvData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -442,15 +442,15 @@ const Dashboard = () => {
     const aqiStatus = getAQIStatus(envData?.aqi);
 
     const metrics = [
-        { icon: Gauge, label: 'AQI', value: envData?.aqi, unit: '', colorClass: 'text-blue-400', insight: envInsights['aqi'], actionKey: 'aqi' },
-        { icon: Thermometer, label: 'Temp', value: envData?.temperature, unit: '°C', colorClass: 'text-amber-400', insight: envInsights['temperature'], actionKey: 'temperature' },
-        { icon: Droplets, label: 'Humidity', value: envData?.humidity, unit: '%', colorClass: 'text-cyan-400', insight: envInsights['humidity'], actionKey: 'humidity' },
-        { icon: Wind, label: 'Wind', value: envData?.wind_speed, unit: ' km/h', colorClass: 'text-teal-400', insight: envInsights['wind_speed'], actionKey: 'wind_speed' },
-        { icon: Zap, label: 'UV Index', value: envData?.uv_index, unit: '', colorClass: 'text-yellow-400', insight: envInsights['uv_index'], actionKey: 'uv_index' },
-        { icon: CloudRain, label: 'PM2.5', value: envData?.pm2_5, unit: ' μg/m³', colorClass: 'text-rose-400', insight: envInsights['pm2_5'], actionKey: 'pm2_5' },
-        { icon: Flame, label: 'PM10', value: envData?.pm10, unit: ' μg/m³', colorClass: 'text-orange-400', insight: envInsights['pm10'], actionKey: 'pm10' },
-        { icon: Eye, label: 'Ozone', value: envData?.ozone, unit: ' μg/m³', colorClass: 'text-purple-400', insight: envInsights['ozone'], actionKey: 'ozone' },
-        { icon: FlaskConical, label: 'NO₂', value: envData?.nitrogen_dioxide, unit: ' μg/m³', colorClass: 'text-pink-400', insight: envInsights['nitrogen_dioxide'], actionKey: 'nitrogen_dioxide' },
+        { icon: Gauge, label: t('dashboard', 'aqi'), value: envData?.aqi, unit: '', colorClass: 'text-blue-400', insight: envInsights['aqi'], actionKey: 'aqi' },
+        { icon: Thermometer, label: t('dashboard', 'temp'), value: envData?.temperature, unit: '°C', colorClass: 'text-amber-400', insight: envInsights['temperature'], actionKey: 'temperature' },
+        { icon: Droplets, label: t('dashboard', 'humidity'), value: envData?.humidity, unit: '%', colorClass: 'text-cyan-400', insight: envInsights['humidity'], actionKey: 'humidity' },
+        { icon: Wind, label: t('dashboard', 'wind'), value: envData?.wind_speed, unit: ' km/h', colorClass: 'text-teal-400', insight: envInsights['wind_speed'], actionKey: 'wind_speed' },
+        { icon: Zap, label: t('dashboard', 'uv'), value: envData?.uv_index, unit: '', colorClass: 'text-yellow-400', insight: envInsights['uv_index'], actionKey: 'uv_index' },
+        { icon: CloudRain, label: t('dashboard', 'pm25'), value: envData?.pm2_5, unit: ' μg/m³', colorClass: 'text-rose-400', insight: envInsights['pm2_5'], actionKey: 'pm2_5' },
+        { icon: Flame, label: t('dashboard', 'pm10'), value: envData?.pm10, unit: ' μg/m³', colorClass: 'text-orange-400', insight: envInsights['pm10'], actionKey: 'pm10' },
+        { icon: Eye, label: t('dashboard', 'ozone'), value: envData?.ozone, unit: ' μg/m³', colorClass: 'text-purple-400', insight: envInsights['ozone'], actionKey: 'ozone' },
+        { icon: FlaskConical, label: t('dashboard', 'no2'), value: envData?.nitrogen_dioxide, unit: ' μg/m³', colorClass: 'text-pink-400', insight: envInsights['nitrogen_dioxide'], actionKey: 'nitrogen_dioxide' },
     ];
 
     return (
@@ -460,7 +460,7 @@ const Dashboard = () => {
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <div>
                         <h1 className="text-4xl font-black flex items-center gap-2">
-                            Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500">{userData.userName}</span>
+                            {t('dashboard', 'welcome')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500">{userData.userName}</span>
                         </h1>
                         <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4 mt-3">
                             <p className={`flex items-center gap-2 font-bold ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
@@ -496,7 +496,7 @@ const Dashboard = () => {
                     >
                         <div className={`w-2 h-2 rounded-full ${environmentalMode ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
                         <span className="text-xs font-bold uppercase tracking-wider">
-                            {environmentalMode ? 'INT Mode: ON' : 'INT Mode: OFF'}
+                            {environmentalMode ? t('dashboard', 'envModeOn') : t('dashboard', 'envModeOff')}
                         </span>
                     </button>
                 </div>
@@ -512,12 +512,12 @@ const Dashboard = () => {
                 {/* Environmental Metrics Grid — always visible */}
                 <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-3 mb-6">
                     {metrics.map((m) => (
-                        <MetricCard key={m.label} {...m} isDarkMode={isDarkMode} insight={m.insight} actionKey={m.actionKey} />
+                        <MetricCard key={m.label} {...m} isDarkMode={isDarkMode} insight={m.insight} actionKey={m.actionKey} t={t} />
                     ))}
                 </div>
 
                 {/* ── Tab Bar ─────────────────────────────────────────────── */}
-                <TabSection isDarkMode={isDarkMode} userData={userData} />
+                <TabSection isDarkMode={isDarkMode} userData={userData} t={t} />
             </div>
         </Layout>
     );

@@ -4,6 +4,7 @@ import { Check, ChevronRight, ArrowRight, Activity, Heart, Brain, Bone, Leaf, Se
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const cn = (...inputs) => twMerge(clsx(inputs));
 
@@ -112,6 +113,7 @@ const Button = ({ onClick, disabled, children, className, isDarkMode, variant = 
 
 export const IntroStep = ({ onNext }) => {
     const { isDarkMode } = useTheme();
+    const { t } = useLanguage();
     return (
         <div className="flex flex-col items-center justify-center text-center h-[80vh] space-y-12">
             <motion.div
@@ -121,17 +123,17 @@ export const IntroStep = ({ onNext }) => {
                 className="max-w-4xl mx-auto"
             >
                 <div className="inline-block px-4 py-1.5 rounded-full bg-emerald-500/10 text-emerald-500 font-semibold text-sm tracking-widest uppercase mb-6 border border-emerald-500/20">
-                    PRAKRITI Assessment
+                    {t('assessment', 'tag')}
                 </div>
                 <h1 className={`text-6xl md:text-8xl font-bold tracking-tight mb-8 ${isDarkMode
                     ? 'text-white'
                     : 'text-gray-900'
                     }`}>
-                    Discover Your <br />
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500">Nature Persona</span>
+                    {t('assessment', 'title1')} <br />
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500">{t('assessment', 'title2')}</span>
                 </h1>
                 <p className={`text-xl md:text-2xl max-w-2xl mx-auto leading-relaxed ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Uncover the deep connection between your cognitive style, physical energy, and the environment.
+                    {t('assessment', 'subtitle')}
                 </p>
             </motion.div>
 
@@ -141,10 +143,10 @@ export const IntroStep = ({ onNext }) => {
                 transition={{ delay: 0.4, duration: 0.5 }}
             >
                 <Button onClick={onNext} isDarkMode={isDarkMode} className="text-lg px-12 py-5 shadow-2xl shadow-emerald-500/30">
-                    Begin Journey <ArrowRight className="w-6 h-6" />
+                    {t('assessment', 'beginBtn')} <ArrowRight className="w-6 h-6" />
                 </Button>
                 <div className={`mt-4 text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                    Takes approximately 2 minutes
+                    {t('assessment', 'timeInfo')}
                 </div>
             </motion.div>
         </div>
@@ -153,6 +155,7 @@ export const IntroStep = ({ onNext }) => {
 
 export const LikertStep = ({ data, update, onNext, onBack }) => {
     const { isDarkMode } = useTheme();
+    const { t } = useLanguage();
 
     const isComplete = data.every(val => val !== null);
 
@@ -164,8 +167,8 @@ export const LikertStep = ({ data, update, onNext, onBack }) => {
 
     return (
         <StepContainer isDarkMode={isDarkMode} className="text-center">
-            <Title isDarkMode={isDarkMode}>Code Your Personality</Title>
-            <Subtitle isDarkMode={isDarkMode}>Rate how strongly you agree with each statement.</Subtitle>
+            <Title isDarkMode={isDarkMode}>{t('assessment', 'likertTitle')}</Title>
+            <Subtitle isDarkMode={isDarkMode}>{t('assessment', 'likertSub')}</Subtitle>
 
             <div className="space-y-8 mb-12 text-left">
                 {LIKERT_QUESTIONS.map((question, qIndex) => (
@@ -212,9 +215,9 @@ export const LikertStep = ({ data, update, onNext, onBack }) => {
             </div>
 
             <div className={`flex justify-between items-center mt-12 pt-8 border-t ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
-                <Button variant="outline" onClick={onBack} isDarkMode={isDarkMode}>Back</Button>
+                <Button variant="outline" onClick={onBack} isDarkMode={isDarkMode}>{t('assessment', 'backBtn')}</Button>
                 <Button onClick={onNext} disabled={!isComplete} isDarkMode={isDarkMode}>
-                    Next Step <ChevronRight className="w-5 h-5" />
+                    {t('assessment', 'nextBtn')} <ChevronRight className="w-5 h-5" />
                 </Button>
             </div>
         </StepContainer>
@@ -223,6 +226,7 @@ export const LikertStep = ({ data, update, onNext, onBack }) => {
 
 export const DiseaseStep = ({ data, update, onNext, onBack }) => {
     const { isDarkMode } = useTheme();
+    const { t } = useLanguage();
 
     const toggleSelection = (item) => {
         let newData;
@@ -241,8 +245,8 @@ export const DiseaseStep = ({ data, update, onNext, onBack }) => {
 
     return (
         <StepContainer isDarkMode={isDarkMode}>
-            <Title isDarkMode={isDarkMode}>Health Profile</Title>
-            <Subtitle isDarkMode={isDarkMode}>Select any diagnosed conditions. Your privacy is paramount.</Subtitle>
+            <Title isDarkMode={isDarkMode}>{t('assessment', 'diseaseTitle')}</Title>
+            <Subtitle isDarkMode={isDarkMode}>{t('assessment', 'diseaseSub')}</Subtitle>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[55vh] overflow-y-auto pr-2 custom-scrollbar">
                 {TAXONOMY.diseases.map((group, idx) => (
@@ -276,9 +280,9 @@ export const DiseaseStep = ({ data, update, onNext, onBack }) => {
             </div>
 
             <div className={`flex justify-between mt-8 pt-4 border-t ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
-                <Button variant="outline" onClick={onBack} isDarkMode={isDarkMode}>Back</Button>
+                <Button variant="outline" onClick={onBack} isDarkMode={isDarkMode}>{t('assessment', 'backBtn')}</Button>
                 <Button onClick={onNext} isDarkMode={isDarkMode}>
-                    Next Step <ChevronRight className="w-5 h-5" />
+                    {t('assessment', 'nextBtn')} <ChevronRight className="w-5 h-5" />
                 </Button>
             </div>
         </StepContainer>
@@ -287,6 +291,7 @@ export const DiseaseStep = ({ data, update, onNext, onBack }) => {
 
 export const InterestStep = ({ data, update, onNext, onBack }) => {
     const { isDarkMode } = useTheme();
+    const { t } = useLanguage();
 
     const toggleSelection = (item) => {
         if (data.includes(item)) {
@@ -298,8 +303,8 @@ export const InterestStep = ({ data, update, onNext, onBack }) => {
 
     return (
         <StepContainer isDarkMode={isDarkMode}>
-            <Title isDarkMode={isDarkMode}>Interest Domains</Title>
-            <Subtitle isDarkMode={isDarkMode}>Select the topics that intellectually stimulate you.</Subtitle>
+            <Title isDarkMode={isDarkMode}>{t('assessment', 'interestTitle')}</Title>
+            <Subtitle isDarkMode={isDarkMode}>{t('assessment', 'interestSub')}</Subtitle>
 
             <div className="space-y-6 max-h-[55vh] overflow-y-auto pr-2 custom-scrollbar">
                 {TAXONOMY.interests.map((group, idx) => (
@@ -334,9 +339,9 @@ export const InterestStep = ({ data, update, onNext, onBack }) => {
             </div>
 
             <div className={`flex justify-between mt-8 pt-4 border-t ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
-                <Button variant="outline" onClick={onBack} isDarkMode={isDarkMode}>Back</Button>
+                <Button variant="outline" onClick={onBack} isDarkMode={isDarkMode}>{t('assessment', 'backBtn')}</Button>
                 <Button onClick={onNext} disabled={data.length === 0} isDarkMode={isDarkMode}>
-                    Next Step <ChevronRight className="w-5 h-5" />
+                    {t('assessment', 'nextBtn')} <ChevronRight className="w-5 h-5" />
                 </Button>
             </div>
         </StepContainer>
@@ -345,6 +350,7 @@ export const InterestStep = ({ data, update, onNext, onBack }) => {
 
 export const HobbyStep = ({ data, update, onNext, onBack }) => {
     const { isDarkMode } = useTheme();
+    const { t } = useLanguage();
     const [search, setSearch] = useState('');
 
     const toggleSelection = (item) => {
@@ -365,14 +371,14 @@ export const HobbyStep = ({ data, update, onNext, onBack }) => {
 
     return (
         <StepContainer isDarkMode={isDarkMode}>
-            <Title isDarkMode={isDarkMode}>Active Pursuits</Title>
-            <Subtitle isDarkMode={isDarkMode}>What do you actually do in your free time?</Subtitle>
+            <Title isDarkMode={isDarkMode}>{t('assessment', 'hobbyTitle')}</Title>
+            <Subtitle isDarkMode={isDarkMode}>{t('assessment', 'hobbySub')}</Subtitle>
 
             <div className="relative mb-8">
                 <Search className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-400'}`} />
                 <input
                     type="text"
-                    placeholder="Search hobbies..."
+                    placeholder={t('assessment', 'searchHobbies')}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className={`w-full border rounded-xl py-4 pl-12 pr-4 transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium ${isDarkMode
@@ -416,9 +422,9 @@ export const HobbyStep = ({ data, update, onNext, onBack }) => {
             </div>
 
             <div className={`flex justify-between mt-8 pt-4 border-t ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
-                <Button variant="outline" onClick={onBack} isDarkMode={isDarkMode}>Back</Button>
+                <Button variant="outline" onClick={onBack} isDarkMode={isDarkMode}>{t('assessment', 'backBtn')}</Button>
                 <Button onClick={onNext} isDarkMode={isDarkMode}>
-                    Next Step <ChevronRight className="w-5 h-5" />
+                    {t('assessment', 'nextBtn')} <ChevronRight className="w-5 h-5" />
                 </Button>
             </div>
         </StepContainer>
@@ -427,6 +433,7 @@ export const HobbyStep = ({ data, update, onNext, onBack }) => {
 
 export const ConstraintStep = ({ data, update, onNext, onBack }) => {
     const { isDarkMode } = useTheme();
+    const { t } = useLanguage();
     const intensities = ['Low', 'Med', 'High'];
     const aqiSensitivities = ['Low', 'Med', 'High'];
 
@@ -434,14 +441,14 @@ export const ConstraintStep = ({ data, update, onNext, onBack }) => {
 
     return (
         <StepContainer isDarkMode={isDarkMode}>
-            <Title isDarkMode={isDarkMode}>Final Configurations</Title>
-            <Subtitle isDarkMode={isDarkMode}>Calibrating your physical bounds.</Subtitle>
+            <Title isDarkMode={isDarkMode}>{t('assessment', 'constTitle')}</Title>
+            <Subtitle isDarkMode={isDarkMode}>{t('assessment', 'constSub')}</Subtitle>
 
             <div className="space-y-8 py-4">
                 <GlassCard className={`p-6 ${isDarkMode ? 'bg-white/5' : 'bg-white/40'}`}>
                     <h3 className={`text-xl font-medium mb-6 flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                         <Activity className="w-6 h-6 text-emerald-500" />
-                        Max Physical Intensity
+                        {t('assessment', 'intensityLabel')}
                     </h3>
                     <div className="grid grid-cols-3 gap-4">
                         {intensities.map(level => (
@@ -473,7 +480,7 @@ export const ConstraintStep = ({ data, update, onNext, onBack }) => {
                 <GlassCard className={`p-6 ${isDarkMode ? 'bg-white/5' : 'bg-white/40'}`}>
                     <h3 className={`text-xl font-medium mb-6 flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                         <Wind className="w-6 h-6 text-blue-500" />
-                        AQI Sensitivity
+                        {t('assessment', 'aqiLabel')}
                     </h3>
                     <div className="grid grid-cols-3 gap-4">
                         {aqiSensitivities.map(level => (
@@ -504,9 +511,9 @@ export const ConstraintStep = ({ data, update, onNext, onBack }) => {
             </div>
 
             <div className={`flex justify-between mt-8 pt-4 border-t ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
-                <Button variant="outline" onClick={onBack} isDarkMode={isDarkMode}>Back</Button>
+                <Button variant="outline" onClick={onBack} isDarkMode={isDarkMode}>{t('assessment', 'backBtn')}</Button>
                 <Button onClick={onNext} disabled={!isComplete} isDarkMode={isDarkMode}>
-                    Complete Profile <Check className="w-5 h-5" />
+                    {t('assessment', 'completeProfileBtn')} <Check className="w-5 h-5" />
                 </Button>
             </div>
         </StepContainer>
@@ -515,6 +522,7 @@ export const ConstraintStep = ({ data, update, onNext, onBack }) => {
 
 export const CompletionStep = () => {
     const { isDarkMode } = useTheme();
+    const { t } = useLanguage();
     return (
         <div className="flex flex-col items-center justify-center text-center h-[60vh] space-y-12">
             <div className="relative">
@@ -540,9 +548,9 @@ export const CompletionStep = () => {
                 transition={{ delay: 0.3 }}
                 className="space-y-4"
             >
-                <h1 className={`text-5xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Profile Calibrated</h1>
+                <h1 className={`text-5xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{t('assessment', 'completeTitle')}</h1>
                 <p className={`max-w-lg mx-auto text-xl ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Your nature persona has been successfully analyzed. <br />Generating your personalized wellness plan.
+                    {t('assessment', 'completeSub')}
                 </p>
             </motion.div>
 
@@ -553,7 +561,7 @@ export const CompletionStep = () => {
                 className="flex gap-3 items-center px-6 py-3 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-sm font-medium animate-pulse"
             >
                 <Activity className="w-5 h-5" />
-                <span>Processing biometrics...</span>
+                <span>{t('assessment', 'processing')}</span>
             </motion.div>
         </div>
     );
