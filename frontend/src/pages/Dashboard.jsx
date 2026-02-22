@@ -283,7 +283,7 @@ const TabSection = ({ isDarkMode, userData }) => {
                     className="mt-6"
                 >
                     {activeTab === 'env' && (
-                        <NewsSection isDarkMode={isDarkMode} />
+                        <NewsSection isDarkMode={isDarkMode} userCity={userData?.locationName?.split(',')[0]} />
                     )}
 
                     {activeTab === 'laws' && (

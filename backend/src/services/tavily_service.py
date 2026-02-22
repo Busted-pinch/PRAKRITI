@@ -6,16 +6,28 @@ class TavilyService:
     def __init__(self):
         self.api_key = os.getenv("TAVILY_API_KEY")
 
-    def search_news(self, query: str = "latest global environmental news climate pollution sustainability law policy", max_results: int = 10) -> List[Dict]:
+    def search_news(self, query: str = None, location_focus: str = "global", max_results: int = 10) -> List[Dict]:
         """
-        Searches Tavily for the latest news based on a query.
-        Returns a list of dictionaries with 'title', 'content', and 'source'.
+        Searches Tavily for the latest news based on a query or location focus.
         """
         extracted_news = []
         
+        # Build query based on location focus if no explicit query is provided
+        if query is None:
+            if location_focus.lower() == "global":
+                query = "latest global environmental news climate pollution sustainability law policy"
+            else:
+                query = f"latest environmental news climate pollution sustainability law policy in {location_focus} city"
+        
         if not self.api_key:
-            print("WARNING: TAVILY_API_KEY not found. Using mock raw news data.")
+            print(f"WARNING: TAVILY_API_KEY not found. Using mock raw news data for {location_focus}.")
             extracted_news = [
+                {
+                    "title": f"Environmental Initiatives Launch in {location_focus.capitalize()}",
+                    "content": f"Local authorities in {location_focus.capitalize()} have announced new measures to combat climate change.",
+                    "source": f"{location_focus.capitalize()} Daily",
+                    "published_at": "2024-11-25T10:00:00Z"
+                },
                 {
                     "title": "Global Plastic Treaty Talks Resume in Busan",
                     "content": "Delegates from over 170 nations have gathered in Busan, South Korea, to negotiate what could become the world's first legally binding treaty on plastic pollution. The talks aim to address the full lifecycle of plastics, from production to disposal.",

@@ -43,7 +43,7 @@ async def get_daily_briefing(lat: float, lon: float, user=Depends(get_current_us
     - Gives one actionable tip
     Data: get_environment_snapshot + get_behavior_profile (no twin data)
     """
-    user_id = getattr(user, "id", "demo-id")
+    user_id = user.get("sub") or user.get("id") if isinstance(user, dict) else getattr(user, "id", "demo-id")
 
     from src.core.cache import get_cache, set_cache
     cache_key = f"daily_briefing:{user_id}:{round(lat, 3)}:{round(lon, 3)}"
@@ -86,7 +86,7 @@ async def get_emotional_ux(lat: float, lon: float, user=Depends(get_current_user
     affect their mood or productivity.
     Data: get_environment_snapshot + get_behavior_profile (no twin data)
     """
-    user_id = getattr(user, "id", "demo-id")
+    user_id = user.get("sub") or user.get("id") if isinstance(user, dict) else getattr(user, "id", "demo-id")
 
     from src.core.cache import get_cache, set_cache
     cache_key = f"emotional_ux:{user_id}:{round(lat, 3)}:{round(lon, 3)}"
@@ -163,7 +163,7 @@ async def get_env_insights(lat: float, lon: float, user=Depends(get_current_user
     on the dashboard. All metrics are generated in parallel and cached for 3 hours.
     Response: { "insights": { "aqi": "...", "temperature": "...", ... } }
     """
-    user_id = getattr(user, "id", "demo-id")
+    user_id = user.get("sub") or user.get("id") if isinstance(user, dict) else getattr(user, "id", "demo-id")
 
     from src.core.cache import get_cache, set_cache
     cache_key = f"env_insights:{user_id}:{round(lat, 3)}:{round(lon, 3)}"
