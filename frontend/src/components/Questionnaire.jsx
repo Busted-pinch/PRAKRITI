@@ -159,7 +159,7 @@ const Questionnaire = () => {
                     {step > 0 && step < 6 && (
                         <div className="mb-8 w-full max-w-md mx-auto">
                             <div className="flex justify-between text-xs font-medium uppercase tracking-widest opacity-60 mb-2">
-                                <span>Progress</span>
+                                <span>{t('assessment', 'progress')}</span>
                                 <span>{Math.round((step / 6) * 100)}%</span>
                             </div>
                             <div className={`h-2 rounded-full overflow-hidden ${isDarkMode ? 'bg-white/10' : 'bg-white/30'
