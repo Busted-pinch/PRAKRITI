@@ -54,7 +54,7 @@ def process_news_for_user(user_profile: dict, environment_context: dict, raw_new
     }
 
     try:
-        model = get_llm(provider="grok")
+        model = get_llm(provider="groq")
         # We request structured output via prompt instructions.
         
         for article in selected_news:

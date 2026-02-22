@@ -133,7 +133,7 @@ async def supervisor_agent(
         # 4️⃣ Final Routing
         # --------------------------------------------------
 
-        llm = get_llm(provider="grok", temperature=0.1)
+        llm = get_llm(provider="groq", temperature=0.1)
         next_agent = "chatbot" # Default fallback
 
         if llm:

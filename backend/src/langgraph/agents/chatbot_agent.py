@@ -15,7 +15,7 @@ async def chatbot_agent(state: UnifiedState, datastore: AggregateData) -> Dict[s
     logger.info("Chatbot Agent: Started processing")
 
     messages = state["messages"]
-    llm = get_llm(provider="grok")
+    llm = get_llm(provider="groq")
     twin_context = state.get("structured_data", {}).get("llm_context", {})
 
     if not llm:

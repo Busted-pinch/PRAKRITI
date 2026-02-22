@@ -19,7 +19,7 @@ async def micro_learning_agent(state: UnifiedState, datastore: Any) -> Dict[str,
     conflict = twin.get("behavior_environment_conflict", {})
     interest_vector = behavior_profile.get("interest_vector", {})
 
-    llm = get_llm(provider="grok")
+    llm = get_llm(provider="groq")
 
     if not llm:
         return {

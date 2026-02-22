@@ -56,7 +56,7 @@ class NewsService:
         # 3. Enrich with LLM
         enriched_news = []
         try:
-            llm = get_llm(provider="grok", temperature=0.2)
+            llm = get_llm(provider="groq", temperature=0.2)
             if not llm:
                 print("Gemini LLM returned None. Need GOOGLE_API_KEY.")
                 return extracted_news

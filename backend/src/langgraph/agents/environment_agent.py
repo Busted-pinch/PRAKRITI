@@ -80,7 +80,7 @@ async def environment_agent(state: UnifiedState, datastore: AggregateData) -> Di
         logger.warning(f"Exposure logging failed: {e}")
 
     # 3️⃣ Risk-aware LLM summary
-    llm = get_llm(provider="grok")
+    llm = get_llm(provider="groq")
     twin_context = state.get("structured_data", {}).get("llm_context", {})
 
     if not llm:

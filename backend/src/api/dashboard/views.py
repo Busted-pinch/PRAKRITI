@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 import json
+import asyncio
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.api.deps import get_current_user
@@ -10,8 +11,8 @@ from src.llm.factory import get_llm
 router = APIRouter(dependencies=[Depends(get_current_user)])
 datastore = AggregateData()
 
-# LLM via factory — Grok (xAI) with graceful fallback to Gemini
-_llm = get_llm(provider="grok", temperature=0.7)
+# LLM via factory — Groq Cloud (key starts with gsk_) with graceful fallback to Gemini
+_llm = get_llm(provider="groq", temperature=0.7)
 
 
 async def _call_llm(system: str, prompt: str) -> str:
@@ -114,3 +115,90 @@ User profile: {json.dumps(behavior)}"""
         await set_cache(cache_key, result, ttl=3 * 3600)
 
     return {"insight": result}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Feature 3: Environmental Parameter Insights (per-card LLM explanations)
+# ─────────────────────────────────────────────────────────────────────────────
+
+_METRIC_META = {
+    "aqi": {"label": "AQI (Air Quality Index)", "unit": ""},
+    "temperature": {"label": "Temperature", "unit": "°C"},
+    "humidity": {"label": "Humidity", "unit": "%"},
+    "wind_speed": {"label": "Wind Speed", "unit": "km/h"},
+    "uv_index": {"label": "UV Index", "unit": ""},
+    "pm2_5": {"label": "PM2.5 (Fine Particles)", "unit": "μg/m³"},
+    "pm10": {"label": "PM10 (Coarse Particles)", "unit": "μg/m³"},
+    "ozone": {"label": "Ozone (O₃)", "unit": "μg/m³"},
+    "nitrogen_dioxide": {"label": "Nitrogen Dioxide (NO₂)", "unit": "μg/m³"},
+}
+
+
+async def _insight_for_metric(metric_key: str, value, env: dict, behavior: dict) -> str:
+    """Generate a personalised 2-3 sentence insight for a single metric."""
+    meta = _METRIC_META.get(metric_key, {"label": metric_key, "unit": ""})
+    label = meta["label"]
+    unit = meta["unit"]
+    formatted_value = f"{value:.1f}{unit}" if isinstance(value, float) else f"{value}{unit}" if value is not None else "N/A"
+
+    system_msg = (
+        "You are Prakriti, a warm and intelligent AI environmental companion. "
+        "Be concise, empathetic, and specific. Never use markdown or bullet points. Plain text only."
+    )
+    user_msg = (
+        f"The current {label} reading is {formatted_value}. "
+        f"In 2-3 plain sentences, tell the user what this specific value means for their daily life, "
+        f"health, and activities — personalised to their profile below. "
+        f"Be direct and actionable. No markdown.\n\n"
+        f"Full environment snapshot: {json.dumps(env)}\n"
+        f"User behavior/health profile: {json.dumps(behavior)}"
+    )
+    return await _call_llm(system_msg, user_msg)
+
+
+@router.get("/env-insights")
+async def get_env_insights(lat: float, lon: float, user=Depends(get_current_user)):
+    """
+    Returns personalised LLM insights for all 9 environmental metrics displayed
+    on the dashboard. All metrics are generated in parallel and cached for 3 hours.
+    Response: { "insights": { "aqi": "...", "temperature": "...", ... } }
+    """
+    user_id = getattr(user, "id", "demo-id")
+
+    from src.core.cache import get_cache, set_cache
+    cache_key = f"env_insights:{user_id}:{round(lat, 3)}:{round(lon, 3)}"
+    cached = await get_cache(cache_key)
+    if cached:
+        # Validate: skip stale entries where LLM previously failed (all null / 'unavailable')
+        valid_entries = [
+            v for v in cached.values()
+            if v and isinstance(v, str) and "unavailable" not in v.lower()
+        ]
+        if valid_entries:
+            return {"insights": cached}
+        # Stale cache — fall through to regenerate
+        logger.info("[env-insights] Stale cache detected (all unavailable), regenerating.")
+
+    env = await datastore.get_environment_snapshot(lat, lon)
+    behavior = await datastore.get_behavior_profile(user_id)
+
+    metric_keys = list(_METRIC_META.keys())
+
+    results = await asyncio.gather(
+        *[_insight_for_metric(key, env.get(key), env, behavior) for key in metric_keys],
+        return_exceptions=True
+    )
+
+    insights = {}
+    for key, result in zip(metric_keys, results):
+        if isinstance(result, Exception):
+            logger.error(f"[env-insights] Error for {key}: {result}")
+            insights[key] = None  # return null; frontend shows loading pulse, not 'unavailable'
+        else:
+            insights[key] = result
+
+    # Only cache if at least one real insight was generated
+    successful = [v for v in insights.values() if v and v != "Insight unavailable."]
+    if successful:
+        await set_cache(cache_key, insights, ttl=3 * 3600)
+    return {"insights": insights}
