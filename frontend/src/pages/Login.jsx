@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import { React, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import { motion } from 'framer-motion';
 import { Mail, Lock, LogIn, ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import Background3D from '../components/Background3D';
@@ -14,6 +15,7 @@ const Login = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { isDarkMode } = useTheme();
+    const { t } = useLanguage();
 
     const from = location.state?.from?.pathname || '/dashboard';
 
@@ -48,9 +50,9 @@ const Login = () => {
                         }`}
                 >
                     <div className="text-center mb-8">
-                        <h2 className={`text-3xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Welcome Back</h2>
+                        <h2 className={`text-3xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{t('auth', 'loginTitle')}</h2>
                         <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                            Sign in to continue your environmental connection.
+                            {t('auth', 'loginSub')}
                         </p>
                     </div>
 
@@ -68,7 +70,7 @@ const Login = () => {
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div>
                             <label className={`block text-xs font-medium uppercase tracking-wider mb-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-                                Email Address
+                                {t('auth', 'emailLabel')}
                             </label>
                             <div className="relative">
                                 <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
@@ -81,14 +83,14 @@ const Login = () => {
                                         ? 'bg-white/5 border border-white/10 text-white focus:border-emerald-500/50 focus:bg-white/10'
                                         : 'bg-white border border-gray-200 text-gray-900 focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10'
                                         }`}
-                                    placeholder="you@example.com"
+                                    placeholder={t('auth', 'emailAuth')}
                                 />
                             </div>
                         </div>
 
                         <div>
                             <label className={`block text-xs font-medium uppercase tracking-wider mb-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-                                Password
+                                {t('auth', 'passwordLabel')}
                             </label>
                             <div className="relative">
                                 <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
@@ -101,7 +103,7 @@ const Login = () => {
                                         ? 'bg-white/5 border border-white/10 text-white focus:border-emerald-500/50 focus:bg-white/10'
                                         : 'bg-white border border-gray-200 text-gray-900 focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10'
                                         }`}
-                                    placeholder="••••••••"
+                                    placeholder={t('auth', 'pwAuth')}
                                 />
                             </div>
                         </div>
@@ -119,7 +121,7 @@ const Login = () => {
                                 <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                             ) : (
                                 <>
-                                    LOG IN <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                    {t('auth', 'loginBtn')} <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                 </>
                             )}
                         </button>
@@ -127,12 +129,12 @@ const Login = () => {
 
                     <div className="mt-8 text-center">
                         <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
-                            Don't have an account?{' '}
+                            {t('auth', 'noAccount')}{' '}
                             <Link
                                 to="/signup"
                                 className={`font-semibold hover:underline ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}
                             >
-                                Sign Up
+                                {t('auth', 'signUpLink')}
                             </Link>
                         </p>
                     </div>

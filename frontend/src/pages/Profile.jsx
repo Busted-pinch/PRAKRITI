@@ -15,6 +15,7 @@ import {
 } from 'recharts';
 import { useTheme } from '../context/ThemeContext';
 import { useEnvironment } from '../context/EnvironmentContext';
+import { useLanguage } from '../context/LanguageContext';
 import GlassCard from '../components/GlassCard';
 import Layout from '../components/Layout';
 import Achievements from '../components/Achievements';
@@ -62,7 +63,7 @@ const TAB_META = [
 
 // ─── Points & Explored display (right half of header) ────────────────────────
 
-const RewardsSummary = ({ rewards, isDarkMode }) => {
+const RewardsSummary = ({ rewards, isDarkMode, t }) => {
     const { total_points = 0, cards_explored = {}, tab_interactions = {} } = rewards;
     const exploredCount = Object.values(cards_explored).filter(v => v > 0).length;
     const tabsCount = Object.values(tab_interactions).filter(v => v > 0).length;
@@ -75,25 +76,25 @@ const RewardsSummary = ({ rewards, isDarkMode }) => {
                 ${isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-emerald-50 border-emerald-100'}`}>
                 <div>
                     <p className={`text-[10px] font-bold uppercase tracking-widest mb-0.5 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                        Total Points
+                        {t('dashboard', 'totalPoints')}
                     </p>
                     <p className={`text-3xl font-black ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
                         {total_points.toLocaleString()}
-                        <span className={`text-sm font-normal ml-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>pts</span>
+                        <span className={`text-sm font-normal ml-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{t('dashboard', 'points')}</span>
                     </p>
                 </div>
                 <div className="flex gap-3 text-right">
                     <div>
                         <p className="text-lg font-black">{exploredCount}<span className={`text-xs font-normal ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>/9</span></p>
-                        <p className={`text-[9px] uppercase tracking-wider ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>Cards</p>
+                        <p className={`text-[9px] uppercase tracking-wider ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{t('dashboard', 'cardsTab')}</p>
                     </div>
                     <div>
                         <p className="text-lg font-black">{tabsCount}<span className={`text-xs font-normal ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>/3</span></p>
-                        <p className={`text-[9px] uppercase tracking-wider ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>Tabs</p>
+                        <p className={`text-[9px] uppercase tracking-wider ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{t('dashboard', 'tabsTab')}</p>
                     </div>
                     <div>
                         <p className="text-lg font-black">{earned}<span className={`text-xs font-normal ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>/16</span></p>
-                        <p className={`text-[9px] uppercase tracking-wider ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>Badges</p>
+                        <p className={`text-[9px] uppercase tracking-wider ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{t('dashboard', 'badgesTab')}</p>
                     </div>
                 </div>
             </div>
@@ -101,7 +102,7 @@ const RewardsSummary = ({ rewards, isDarkMode }) => {
             {/* Cards explored mini grid */}
             <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-white/[0.03] border-white/8' : 'bg-gray-50 border-gray-100'}`}>
                 <p className={`text-[9px] font-bold uppercase tracking-widest mb-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                    Cards & Tabs Explored
+                    {t('dashboard', 'cardsExplored')}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                     {CARD_META.map(({ key, label, icon: Icon, color }) => {
@@ -145,6 +146,7 @@ const RewardsSummary = ({ rewards, isDarkMode }) => {
 const Profile = () => {
     const { isDarkMode } = useTheme();
     const { environmentalMode } = useEnvironment();
+    const { t } = useLanguage();
     const [userData, setUserData] = useState(null);
     const [rewards, setRewards] = useState({ total_points: 0, cards_explored: {}, tab_interactions: {}, achievements: [] });
     const [loading, setLoading] = useState(true);
@@ -315,7 +317,7 @@ const Profile = () => {
                                         "{userData.persona.desc}"
                                     </p>
                                     <p className={`text-xs mt-2 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`}>
-                                        Click your name to edit profile
+                                        {t('profile', 'clickToEdit')}
                                     </p>
                                 </div>
                             </div>
@@ -324,25 +326,25 @@ const Profile = () => {
                             <div className={`md:w-px md:self-stretch ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'} hidden md:block`} />
 
                             {/* Right — Rewards summary */}
-                            <RewardsSummary rewards={rewards} isDarkMode={isDarkMode} />
+                            <RewardsSummary rewards={rewards} isDarkMode={isDarkMode} t={t} />
                         </div>
                     </GlassCard>
                 </div>
 
                 {/* ── Assessment Profile ─────────────────────────────────────── */}
                 <div className="mb-8">
-                    <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Assessment Profile</h2>
+                    <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{t('profile', 'assessmentProfile')}</h2>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* Hobbies */}
                         <GlassCard className="p-6" hoverEffect={false}>
                             <div className="flex items-center gap-2 mb-4">
                                 <Heart className={`w-5 h-5 ${isDarkMode ? 'text-rose-400' : 'text-rose-600'}`} />
-                                <h3 className="font-semibold text-lg">Hobbies</h3>
+                                <h3 className="font-semibold text-lg">{t('profile', 'hobbies')}</h3>
                             </div>
                             <div className="flex flex-wrap gap-2 flex-grow">
                                 {userData.hobbies.length > 0 ? userData.hobbies.map((h, i) => (
                                     <span key={i} className={`px-3 py-1 rounded-full text-xs font-medium ${isDarkMode ? 'bg-white/10 text-gray-300' : 'bg-emerald-50 text-emerald-700'}`}>{h}</span>
-                                )) : <span className="text-sm text-gray-500">No hobbies added</span>}
+                                )) : <span className="text-sm text-gray-500">{t('profile', 'noHobbies')}</span>}
                             </div>
                         </GlassCard>
 
@@ -352,12 +354,12 @@ const Profile = () => {
                                 <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-emerald-500/20' : 'bg-emerald-100'}`}>
                                     <Leaf className={`w-5 h-5 ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
                                 </div>
-                                <h3 className="font-bold text-lg">Interests</h3>
+                                <h3 className="font-bold text-lg">{t('profile', 'interests')}</h3>
                             </div>
                             <div className="flex flex-wrap gap-2 flex-grow">
                                 {userData.interests.length > 0 ? userData.interests.map((interest, i) => (
                                     <span key={i} className={`px-3 py-1 rounded-full text-xs font-medium ${isDarkMode ? 'bg-white/10 text-gray-300' : 'bg-teal-50 text-teal-700'}`}>{interest}</span>
-                                )) : <span className="text-sm text-gray-500">No interests added</span>}
+                                )) : <span className="text-sm text-gray-500">{t('profile', 'noInterests')}</span>}
                             </div>
                         </GlassCard>
 
@@ -365,14 +367,14 @@ const Profile = () => {
                         <GlassCard className="p-6" hoverEffect={false}>
                             <div className="flex items-center gap-2 mb-4">
                                 <Shield className={`w-5 h-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
-                                <h3 className="font-semibold text-lg">Health Profile</h3>
+                                <h3 className="font-semibold text-lg">{t('profile', 'healthProfile')}</h3>
                             </div>
                             <div className="space-y-4">
                                 <div>
                                     <div className="flex justify-between text-sm mb-2">
-                                        <span className="opacity-70">Intensity Level</span>
+                                        <span className="opacity-70">{t('profile', 'intensityLevel')}</span>
                                         <span className={`font-bold capitalize ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
-                                            {userData.constraints?.max_physical_intensity || 'Medium'}
+                                            {t('profile', userData.constraints?.max_physical_intensity) || 'Medium'}
                                         </span>
                                     </div>
                                     <div className={`h-2 rounded-full ${isDarkMode ? 'bg-white/10' : 'bg-gray-100'}`}>
@@ -394,18 +396,18 @@ const Profile = () => {
                                 <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-amber-500/20' : 'bg-amber-100'}`}>
                                     <Shield className={`w-5 h-5 ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`} />
                                 </div>
-                                <h3 className="font-bold text-lg">Health Guard</h3>
+                                <h3 className="font-bold text-lg">{t('profile', 'healthGuard')}</h3>
                             </div>
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between text-sm">
-                                    <span className="opacity-70">AQI Sensitivity</span>
+                                    <span className="opacity-70">{t('profile', 'aqiSensitivity')}</span>
                                     <span className={`font-bold capitalize ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                                        {userData.constraints?.aqi_sensitivity || 'Medium'}
+                                        {t('profile', userData.constraints?.aqi_sensitivity) || 'Medium'}
                                     </span>
                                 </div>
                                 {userData.diseases.length > 0 ? (
                                     <div className="space-y-2">
-                                        <p className="text-xs font-semibold opacity-50 uppercase tracking-wider">Conditions & Risks</p>
+                                        <p className="text-xs font-semibold opacity-50 uppercase tracking-wider">{t('profile', 'conditions')}</p>
                                         <div className="flex flex-wrap gap-1.5">
                                             {userData.diseases.map((d, i) => (
                                                 <span key={i} className={`px-2 py-0.5 rounded text-xs ${isDarkMode ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-50 text-amber-700'}`}>{d}</span>
@@ -415,7 +417,7 @@ const Profile = () => {
                                 ) : (
                                     <div className={`p-3 rounded-xl flex items-center gap-3 ${isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'} text-xs font-semibold`}>
                                         <Check className="w-4 h-4" />
-                                        No chronic conditions reported.
+                                        {t('profile', 'noConditions')}
                                     </div>
                                 )}
                             </div>
@@ -431,7 +433,7 @@ const Profile = () => {
                             <div className="flex justify-between items-start mb-4">
                                 <h3 className="font-semibold text-lg flex items-center gap-2">
                                     <Activity className="w-5 h-5 text-emerald-500" />
-                                    Trait Resonance
+                                    {t('profile', 'traitResonance')}
                                 </h3>
                             </div>
                             <div className="h-[250px] w-full relative">
@@ -457,7 +459,7 @@ const Profile = () => {
                         : ''}`}>
                         <h3 className="font-semibold text-lg flex items-center gap-2 mb-6">
                             <Wind className="w-5 h-5 text-blue-500" />
-                            Respiratory Resilience
+                            {t('profile', 'respResilience')}
                         </h3>
                         <div className="h-[200px] relative flex items-center justify-center">
                             <ResponsiveContainer width="100%" height="100%">
@@ -471,13 +473,13 @@ const Profile = () => {
                             </ResponsiveContainer>
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                                 <span className="text-3xl font-bold">{userData.aqiData[0].value}%</span>
-                                <span className="text-xs text-gray-500 uppercase tracking-widest">Tolerance</span>
+                                <span className="text-xs text-gray-500 uppercase tracking-widest">{t('profile', 'tolerance')}</span>
                             </div>
                         </div>
                         <div className="mt-8 space-y-4">
                             <div className="flex justify-between items-center text-sm">
-                                <span className="text-gray-500">Current AQI (Local)</span>
-                                <span className="font-mono font-bold text-emerald-500">{userData.currentAQI} (Good)</span>
+                                <span className="text-gray-500">{t('profile', 'currentAqi')}</span>
+                                <span className="font-mono font-bold text-emerald-500">{userData.currentAQI}</span>
                             </div>
                             <div className="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full overflow-hidden">
                                 <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(userData.currentAQI, 100)}%` }} className="h-full bg-gradient-to-r from-emerald-400 to-teal-600" />
@@ -506,9 +508,9 @@ const Profile = () => {
                                 exit={{ scale: 0.95 }}
                                 className={`w-full max-w-lg rounded-2xl p-6 ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} shadow-2xl overflow-y-auto max-h-[90vh]`}
                             >
-                                <h2 className="text-2xl font-bold mb-2">Edit Profile</h2>
+                                <h2 className="text-2xl font-bold mb-2">{t('profile', 'editProfileTitle')}</h2>
                                 <p className={`text-sm mb-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                    Update your details manually or retake the assessment for a fresh analysis.
+                                    {t('profile', 'editSub')}
                                 </p>
 
                                 <div className="mb-8">
@@ -520,8 +522,8 @@ const Profile = () => {
                                             <Activity className="w-6 h-6" />
                                         </div>
                                         <div className="text-center">
-                                            <span className="block font-bold text-emerald-500 text-lg">Retake Assessment</span>
-                                            <span className="text-xs opacity-60">Redefine your nature persona through guided questions</span>
+                                            <span className="block font-bold text-emerald-500 text-lg">{t('profile', 'retakeTitle')}</span>
+                                            <span className="text-xs opacity-60">{t('profile', 'retakeSub')}</span>
                                         </div>
                                     </button>
                                 </div>
@@ -531,48 +533,48 @@ const Profile = () => {
                                         <div className={`w-full border-t ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`} />
                                     </div>
                                     <div className="relative flex justify-center text-xs uppercase">
-                                        <span className={`px-4 font-bold tracking-widest ${isDarkMode ? 'bg-gray-800 text-gray-500' : 'bg-white text-gray-400'}`}>Or Manual Update</span>
+                                        <span className={`px-4 font-bold tracking-widest ${isDarkMode ? 'bg-gray-800 text-gray-500' : 'bg-white text-gray-400'}`}>{t('profile', 'manualUpdate')}</span>
                                     </div>
                                 </div>
 
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium mb-1">Name</label>
+                                        <label className="block text-sm font-medium mb-1">{t('profile', 'nameLabel')}</label>
                                         <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                                             className={`w-full p-2 rounded-lg border focus:ring-2 focus:ring-emerald-500 outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-300'}`} />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium mb-1">Hobbies (comma separated)</label>
+                                        <label className="block text-sm font-medium mb-1">{t('profile', 'hobbiesLabel')}</label>
                                         <input type="text" value={editForm.hobbies} onChange={(e) => setEditForm({ ...editForm, hobbies: e.target.value })}
                                             className={`w-full p-2 rounded-lg border focus:ring-2 focus:ring-emerald-500 outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-300'}`} />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium mb-1">Interests (comma separated)</label>
+                                        <label className="block text-sm font-medium mb-1">{t('profile', 'interestsLabel')}</label>
                                         <input type="text" value={editForm.interests} onChange={(e) => setEditForm({ ...editForm, interests: e.target.value })}
                                             className={`w-full p-2 rounded-lg border focus:ring-2 focus:ring-emerald-500 outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-300'}`} />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium mb-1">Health Risks (comma separated)</label>
+                                        <label className="block text-sm font-medium mb-1">{t('profile', 'healthRisksLabel')}</label>
                                         <input type="text" value={editForm.diseases} onChange={(e) => setEditForm({ ...editForm, diseases: e.target.value })}
                                             className={`w-full p-2 rounded-lg border focus:ring-2 focus:ring-emerald-500 outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-300'}`} />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-sm font-medium mb-1">Physical Intensity</label>
+                                            <label className="block text-sm font-medium mb-1">{t('profile', 'physIntLabel')}</label>
                                             <select value={editForm.max_physical_intensity} onChange={(e) => setEditForm({ ...editForm, max_physical_intensity: e.target.value })}
                                                 className={`w-full p-2 rounded-lg border focus:ring-2 focus:ring-emerald-500 outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-300'}`}>
-                                                <option value="low">Low</option>
-                                                <option value="med">Medium</option>
-                                                <option value="high">High</option>
+                                                <option value="low">{t('profile', 'low')}</option>
+                                                <option value="med">{t('profile', 'med')}</option>
+                                                <option value="high">{t('profile', 'high')}</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium mb-1">AQI Sensitivity</label>
+                                            <label className="block text-sm font-medium mb-1">{t('profile', 'aqiSensLabel')}</label>
                                             <select value={editForm.aqi_sensitivity} onChange={(e) => setEditForm({ ...editForm, aqi_sensitivity: e.target.value })}
                                                 className={`w-full p-2 rounded-lg border focus:ring-2 focus:ring-emerald-500 outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-300'}`}>
-                                                <option value="low">Low (Tolerant)</option>
-                                                <option value="med">Medium</option>
-                                                <option value="high">High (Sensitive)</option>
+                                                <option value="low">{t('profile', 'lowSens')}</option>
+                                                <option value="med">{t('profile', 'med')}</option>
+                                                <option value="high">{t('profile', 'highSens')}</option>
                                             </select>
                                         </div>
                                     </div>
@@ -580,11 +582,11 @@ const Profile = () => {
                                 <div className="mt-8 flex justify-end gap-3">
                                     <button onClick={() => setIsEditing(false)}
                                         className={`px-4 py-2 rounded-lg font-medium transition-colors ${isDarkMode ? 'text-gray-300 hover:bg-white/10' : 'text-gray-600 hover:bg-gray-100'}`}>
-                                        Cancel
+                                        {t('profile', 'cancelBtn')}
                                     </button>
                                     <button onClick={handleSaveProfile}
                                         className="px-4 py-2 bg-emerald-500 text-white rounded-lg font-medium hover:bg-emerald-400 transition-colors">
-                                        Save Changes
+                                        {t('profile', 'saveBtn')}
                                     </button>
                                 </div>
                             </motion.div>

@@ -17,6 +17,12 @@ class TavilyService:
             print("WARNING: TAVILY_API_KEY not found. Using mock raw news data.")
             extracted_news = [
                 {
+                    "title": f"Environmental Initiatives Launch in {location_focus.capitalize()}",
+                    "content": f"Local authorities in {location_focus.capitalize()} have announced new measures to combat climate change.",
+                    "source": f"{location_focus.capitalize()} Daily",
+                    "published_at": "2024-11-25T10:00:00Z"
+                }, 
+                {
                     "title": "Global Plastic Treaty Talks Resume in Busan",
                     "content": "Delegates from over 170 nations have gathered in Busan, South Korea, to negotiate what could become the world's first legally binding treaty on plastic pollution. The talks aim to address the full lifecycle of plastics, from production to disposal.",
                     "source": "Global Environment News",

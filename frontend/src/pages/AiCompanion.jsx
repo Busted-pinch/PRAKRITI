@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Mic, Sparkles } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 import Layout from '../components/Layout';
 import api from '../services/api';
 
@@ -25,6 +26,7 @@ const formatMessage = (text) => {
 const AiCompanion = () => {
     const { isDarkMode } = useTheme();
     const { user } = useAuth();
+    const { t } = useLanguage();
     const [messages, setMessages] = useState([
         { id: 'welcome', text: "Greetings, Traveler. I am Prakriti's Digital Twin. I can help you understand your environment and habits.", sender: 'bot' }
     ]);
@@ -251,13 +253,13 @@ const AiCompanion = () => {
                             <Sparkles className="w-5 h-5 text-emerald-500" />
                         </div>
                         <div>
-                            <h3 className="font-bold">Digital Twin</h3>
+                            <h3 className="font-bold">{t('companion', 'title')}</h3>
                             <div className="flex items-center gap-1.5">
                                 <span className="relative flex h-1.5 w-1.5">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                     <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
                                 </span>
-                                <p className={`text-xs ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>Online · Ask about your environment</p>
+                                <p className={`text-xs ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>{t('companion', 'subtitle')}</p>
                             </div>
                         </div>
                     </div>
@@ -338,7 +340,7 @@ const AiCompanion = () => {
                             type="text"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            placeholder={PLACEHOLDERS[placeholderIndex]}
+                            placeholder={t('companion', 'placeholder') || PLACEHOLDERS[placeholderIndex]}
                             className={`flex-1 bg-transparent px-2 py-2 focus:outline-none transition-all duration-500 ${isDarkMode ? 'text-white placeholder-gray-500' : 'text-gray-900 placeholder-gray-400'
                                 }`}
                         />
@@ -351,7 +353,7 @@ const AiCompanion = () => {
                         </button>
                     </form>
                     <p className={`mt-3 text-center text-[10px] ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`}>
-                        Prakriti AI can make mistakes. Verify important information.
+                        {t('companion', 'warning')}
                     </p>
                 </div>
             </div>

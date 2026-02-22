@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Menu, X, Leaf, Sun, Moon } from 'lucide-react';
+import { Menu, X, Leaf, Sun, Moon, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
 import { useEnvironment } from '../context/EnvironmentContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -12,6 +13,7 @@ const Navbar = () => {
     const location = useLocation();
     const { isDarkMode, toggleTheme } = useTheme();
     const { environmentalMode, setEnvironmentalMode } = useEnvironment();
+    const { language, toggleLanguage, t } = useLanguage();
     const { user, logout } = useAuth(); // START: Added auth hook
     const navigate = useNavigate();
 
@@ -35,13 +37,13 @@ const Navbar = () => {
     };
 
     const navLinks = [
-        { name: 'Home', path: '/' },
-        { name: 'About', path: '/about' },
+        { name: t('nav', 'home'), path: '/' },
+        { name: t('nav', 'about'), path: '/about' },
     ];
 
     // Filter links if needed, or add Dashboard
     const displayLinks = user
-        ? [...navLinks, { name: 'Dashboard', path: '/dashboard' }, { name: 'Digital Twin', path: '/companion' }]
+        ? [...navLinks, { name: t('nav', 'dashboard'), path: '/dashboard' }, { name: t('nav', 'digitalTwin'), path: '/companion' }]
         : navLinks;
 
     return (
@@ -98,7 +100,7 @@ const Navbar = () => {
                                         : 'border-gray-200 hover:bg-gray-100 text-gray-700'
                                         }`}
                                 >
-                                    Logout
+                                    {t('nav', 'logout')}
                                 </button>
                             </div>
                         ) : (
@@ -108,7 +110,7 @@ const Navbar = () => {
                                     className={`text-sm font-medium transition-colors hover:text-emerald-500 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'
                                         }`}
                                 >
-                                    Log In
+                                    {t('nav', 'login')}
                                 </Link>
                                 <Link
                                     to="/signup"
@@ -117,7 +119,7 @@ const Navbar = () => {
                                         : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/20'
                                         }`}
                                 >
-                                    Get Started
+                                    {t('nav', 'getStarted')}
                                 </Link>
                             </div>
                         )}
@@ -138,6 +140,41 @@ const Navbar = () => {
                                 <Leaf className={`w-5 h-5 ${environmentalMode ? 'fill-current' : ''}`} />
                             </button>
                         )}
+
+                        <select
+                            onChange={(e) => {
+                                const language = e.target.value;
+                                const select = document.querySelector(".goog-te-combo");
+                                if (select) {
+                                    select.value = language || 'en';
+                                    select.dispatchEvent(new Event("change", { bubbles: true }));
+                                } else if (language) {
+                                    document.cookie = `googtrans=/en/${language}; path=/`;
+                                    window.location.reload();
+                                } else {
+                                    document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+                                    window.location.reload();
+                                }
+                            }}
+                            className={`py-1.5 md:py-2 px-3 md:px-4 rounded-xl transition-all font-bold text-xs md:text-sm tracking-wide cursor-pointer outline-none focus:ring-2 focus:ring-emerald-500/50 shadow-sm border ${isDarkMode
+                                ? 'bg-gradient-to-r from-gray-800 to-gray-900 border-emerald-500/30 text-emerald-400 hover:border-emerald-500/60'
+                                : 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 text-emerald-700 hover:border-emerald-400'
+                                }`}
+                        >
+                            <option value="">Translate</option>
+                            <option value="en">English (Default)</option>
+                            <option value="hi">Hindi</option>
+                            <option value="mr">Marathi</option>
+                            <option value="ta">Tamil</option>
+                            <option value="te">Telugu</option>
+                            <option value="bn">Bengali</option>
+                            <option value="kn">Kannada</option>
+                            <option value="gu">Gujarati</option>
+                            <option value="ml">Malayalam</option>
+                            <option value="pa">Punjabi</option>
+                            <option value="or">Odia</option>
+                            <option value="as">Assamese</option>
+                        </select>
 
                         <button
                             onClick={toggleTheme}
@@ -194,7 +231,7 @@ const Navbar = () => {
                                     onClick={handleLogout}
                                     className="w-full text-center px-6 py-3 rounded-xl font-bold border border-gray-200 text-gray-600"
                                 >
-                                    element Logout
+                                    {t('nav', 'logout')}
                                 </button>
                             ) : (
                                 <>
@@ -202,13 +239,13 @@ const Navbar = () => {
                                         to="/login"
                                         className={`block w-full text-center px-4 py-2 rounded-lg ${isDarkMode ? 'text-gray-300 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100'}`}
                                     >
-                                        Log In
+                                        {t('nav', 'login')}
                                     </Link>
                                     <Link
                                         to="/signup"
                                         className="w-full text-center px-6 py-3 rounded-xl font-bold bg-gradient-to-r from-emerald-500 to-teal-600 text-white"
                                     >
-                                        Get Started
+                                        {t('nav', 'getStarted')}
                                     </Link>
                                 </>
                             )}
