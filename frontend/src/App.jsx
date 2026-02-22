@@ -12,6 +12,7 @@ import Contact from './pages/Contact';
 import AiCompanion from './pages/AiCompanion';
 import Profile from './pages/Profile';
 import './index.css';
+import PrakritiMapPage from "./pages/PrakritiMapPage";
 
 
 import { EnvironmentProvider } from './context/EnvironmentContext';
@@ -82,3 +83,5 @@ function App() {
 }
 
 export default App;
+
+
