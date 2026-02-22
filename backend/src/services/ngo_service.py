@@ -121,14 +121,27 @@ async def ingest_events_to_db(events: list[dict]):
             print(f"Failed to insert event to Supabase: {e}")
 
 async def get_user_profile_text(user_id: str) -> str:
-    """Fetch user behavior profile to build embedding context."""
+    """Fetch user behavior profile to build embedding context (5s timeout)."""
+    import asyncio
     try:
-        res = supabase.table("behavior_profiles").select("behavior_model, selected_interests").eq("user_id", user_id).execute()
+        loop = asyncio.get_running_loop()
+        res = await asyncio.wait_for(
+            loop.run_in_executor(
+                None,
+                lambda: supabase.table("behavior_profiles")
+                    .select("behavior_model, selected_interests")
+                    .eq("user_id", user_id)
+                    .execute()
+            ),
+            timeout=5.0
+        )
         if res.data and len(res.data) > 0:
             profile = res.data[0]
             interests = profile.get("selected_interests", [])
             behavior = profile.get("behavior_model", {})
             return f"interests: {', '.join(interests)}. behaviors: {json.dumps(behavior)}"
+    except asyncio.TimeoutError:
+        print(f"Timeout fetching user profile context for user_id={user_id}. Using fallback.")
     except Exception as e:
         print(f"Error fetching user profile context: {e}")
     return "general volunteering community service"

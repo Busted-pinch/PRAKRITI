@@ -58,7 +58,7 @@ const MetricModal = ({ metric, onClose, isDarkMode }) => {
         return () => window.removeEventListener('keydown', handleKey);
     }, [handleKey]);
 
-    const { icon: Icon, label, value, unit, colorClass, description } = metric;
+    const { icon: Icon, label, value, unit, colorClass, insight } = metric;
     const formattedValue = value != null
         ? (typeof value === 'number' ? value.toFixed(value % 1 !== 0 ? 1 : 0) : value)
         : '—';
@@ -138,19 +138,18 @@ const MetricModal = ({ metric, onClose, isDarkMode }) => {
                         {/* Divider */}
                         <div className={`h-px mb-5 ${isDarkMode ? 'bg-white/8' : 'bg-gray-100'}`} />
 
-                        {/* ── Insight sections (Backend team: fill these in) ── */}
+                        {/* ── AI Insight section ── */}
                         <div className="space-y-4">
-                            {/* Section 1: What this means for you */}
                             <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-white/[0.04] border border-white/8' : 'bg-gray-50 border border-gray-100'}`}>
                                 <p className={`text-[11px] font-bold uppercase tracking-widest mb-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>What This Means for You</p>
-                                {/* TODO (Backend): Replace placeholder with personalised insight */}
-                                <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                    Personalised analysis for {label} coming soon.
-                                    Your profile will be used to tailor recommendations based on your health, lifestyle, and location.
-                                </p>
+                                {insight ? (
+                                    <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>{insight}</p>
+                                ) : (
+                                    <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-gray-600' : 'text-gray-400'} animate-pulse`}>
+                                        Generating personalised insight…
+                                    </p>
+                                )}
                             </div>
-
-
                         </div>
 
                         <p className={`mt-4 text-center text-[10px] ${isDarkMode ? 'text-gray-700' : 'text-gray-300'}`}>
@@ -163,9 +162,9 @@ const MetricModal = ({ metric, onClose, isDarkMode }) => {
     );
 };
 
-const MetricCard = ({ icon: Icon, label, value, unit, colorClass, isDarkMode }) => {
+const MetricCard = ({ icon: Icon, label, value, unit, colorClass, isDarkMode, insight }) => {
     const [open, setOpen] = useState(false);
-    const metric = { icon: Icon, label, value, unit, colorClass };
+    const metric = { icon: Icon, label, value, unit, colorClass, insight };
 
     // Extract a raw hex/rgba for the box-shadow glow (simpler than Tailwind dynamic classes)
     const glowColor = colorClass.includes('blue') ? 'rgba(59,130,246,0.35)'
@@ -310,6 +309,7 @@ const Dashboard = () => {
     const [loading, setLoading] = useState(true);
     const [dailyBriefing, setDailyBriefing] = useState(null);
     const [emotionalInsight, setEmotionalInsight] = useState(null);
+    const [envInsights, setEnvInsights] = useState({});
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -337,7 +337,7 @@ const Dashboard = () => {
                     api.get('/user/profile'),
                     api.get(`/environment/current?lat=${lat}&lon=${lon}`),
                     api.get(`/dashboard/daily-briefing?lat=${lat}&lon=${lon}`),
-                    api.get(`/dashboard/emotional-ux?lat=${lat}&lon=${lon}`)
+                    api.get(`/dashboard/emotional-ux?lat=${lat}&lon=${lon}`),
                 ]);
 
                 let profileData = null;
@@ -387,6 +387,31 @@ const Dashboard = () => {
         fetchDashboardData();
     }, []);
 
+    // Fetch env-insights separately (can be slow — 9 LLM calls) so the
+    // dashboard renders immediately and insights populate in the background.
+    useEffect(() => {
+        if (!userData || !envData) return;
+        let cancelled = false;
+        const fetchInsights = async () => {
+            try {
+                let lat = 28.6139, lon = 77.2090;
+                try {
+                    const loc = await fetch('https://ipapi.co/json/');
+                    const locData = await loc.json();
+                    if (locData?.latitude) { lat = locData.latitude; lon = locData.longitude; }
+                } catch (_) { }
+                const res = await api.get(`/dashboard/env-insights?lat=${lat}&lon=${lon}`);
+                if (!cancelled && res.data?.insights) {
+                    setEnvInsights(res.data.insights);
+                }
+            } catch (e) {
+                console.warn('[env-insights] fetch failed:', e);
+            }
+        };
+        fetchInsights();
+        return () => { cancelled = true; };
+    }, [userData, envData]);
+
     if (loading) {
         return (
             <Layout>
@@ -402,15 +427,15 @@ const Dashboard = () => {
     const aqiStatus = getAQIStatus(envData?.aqi);
 
     const metrics = [
-        { icon: Gauge, label: 'AQI', value: envData?.aqi, unit: '', colorClass: 'text-blue-400' },
-        { icon: Thermometer, label: 'Temp', value: envData?.temperature, unit: '°C', colorClass: 'text-amber-400' },
-        { icon: Droplets, label: 'Humidity', value: envData?.humidity, unit: '%', colorClass: 'text-cyan-400' },
-        { icon: Wind, label: 'Wind', value: envData?.wind_speed, unit: ' km/h', colorClass: 'text-teal-400' },
-        { icon: Zap, label: 'UV Index', value: envData?.uv_index, unit: '', colorClass: 'text-yellow-400' },
-        { icon: CloudRain, label: 'PM2.5', value: envData?.pm2_5, unit: ' μg/m³', colorClass: 'text-rose-400' },
-        { icon: Flame, label: 'PM10', value: envData?.pm10, unit: ' μg/m³', colorClass: 'text-orange-400' },
-        { icon: Eye, label: 'Ozone', value: envData?.ozone, unit: ' μg/m³', colorClass: 'text-purple-400' },
-        { icon: FlaskConical, label: 'NO₂', value: envData?.nitrogen_dioxide, unit: ' μg/m³', colorClass: 'text-pink-400' },
+        { icon: Gauge, label: 'AQI', value: envData?.aqi, unit: '', colorClass: 'text-blue-400', insight: envInsights['aqi'] },
+        { icon: Thermometer, label: 'Temp', value: envData?.temperature, unit: '°C', colorClass: 'text-amber-400', insight: envInsights['temperature'] },
+        { icon: Droplets, label: 'Humidity', value: envData?.humidity, unit: '%', colorClass: 'text-cyan-400', insight: envInsights['humidity'] },
+        { icon: Wind, label: 'Wind', value: envData?.wind_speed, unit: ' km/h', colorClass: 'text-teal-400', insight: envInsights['wind_speed'] },
+        { icon: Zap, label: 'UV Index', value: envData?.uv_index, unit: '', colorClass: 'text-yellow-400', insight: envInsights['uv_index'] },
+        { icon: CloudRain, label: 'PM2.5', value: envData?.pm2_5, unit: ' μg/m³', colorClass: 'text-rose-400', insight: envInsights['pm2_5'] },
+        { icon: Flame, label: 'PM10', value: envData?.pm10, unit: ' μg/m³', colorClass: 'text-orange-400', insight: envInsights['pm10'] },
+        { icon: Eye, label: 'Ozone', value: envData?.ozone, unit: ' μg/m³', colorClass: 'text-purple-400', insight: envInsights['ozone'] },
+        { icon: FlaskConical, label: 'NO₂', value: envData?.nitrogen_dioxide, unit: ' μg/m³', colorClass: 'text-pink-400', insight: envInsights['nitrogen_dioxide'] },
     ];
 
     return (
@@ -461,7 +486,7 @@ const Dashboard = () => {
                 {/* Environmental Metrics Grid — always visible */}
                 <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-3 mb-6">
                     {metrics.map((m) => (
-                        <MetricCard key={m.label} {...m} isDarkMode={isDarkMode} />
+                        <MetricCard key={m.label} {...m} isDarkMode={isDarkMode} insight={m.insight} />
                     ))}
                 </div>
 

@@ -36,7 +36,7 @@ def process_laws_for_user(user_profile: dict, raw_laws: list) -> list:
     }
 
     try:
-        model = get_llm(provider="grok")
+        model = get_llm(provider="groq")
         for law in raw_laws:
             prompt_context = {
                 "user_profile": clean_profile,

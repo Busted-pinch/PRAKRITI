@@ -35,9 +35,10 @@ def get_llm(provider: str = "groq", model_name: str = None, temperature: float =
             return get_llm(provider="gemini", model_name=model_name, temperature=temperature)
 
     elif provider == "groq":
-        api_key = os.getenv("GROQ_API_KEY")
+        # Accept both GROQ_API_KEY and GROK_API_KEY (the project .env uses GROK_API_KEY)
+        api_key = os.getenv("GROQ_API_KEY") or os.getenv("GROK_API_KEY")
         if not api_key:
-            print("WARNING: GROQ_API_KEY not found. Falling back to Gemini.")
+            print("WARNING: GROQ_API_KEY / GROK_API_KEY not found. Falling back to Gemini.")
             return get_llm(provider="gemini", model_name=model_name, temperature=temperature)
         return ChatGroq(
             api_key=api_key,
