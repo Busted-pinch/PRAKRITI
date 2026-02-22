@@ -169,7 +169,15 @@ async def get_env_insights(lat: float, lon: float, user=Depends(get_current_user
     cache_key = f"env_insights:{user_id}:{round(lat, 3)}:{round(lon, 3)}"
     cached = await get_cache(cache_key)
     if cached:
-        return {"insights": cached}
+        # Validate: skip stale entries where LLM previously failed (all null / 'unavailable')
+        valid_entries = [
+            v for v in cached.values()
+            if v and isinstance(v, str) and "unavailable" not in v.lower()
+        ]
+        if valid_entries:
+            return {"insights": cached}
+        # Stale cache — fall through to regenerate
+        logger.info("[env-insights] Stale cache detected (all unavailable), regenerating.")
 
     env = await datastore.get_environment_snapshot(lat, lon)
     behavior = await datastore.get_behavior_profile(user_id)
