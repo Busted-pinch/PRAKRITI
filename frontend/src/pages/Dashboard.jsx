@@ -18,6 +18,10 @@ import api from '../services/api';
 import ContextualBriefing from '../components/ContextualBriefing';
 import EmotionalUX from '../components/EmotionalUX';
 
+// Fire-and-forget: award points for exploration actions
+const rewardAction = (action_type, action_key) => {
+    api.post('/rewards/action', { action_type, action_key }).catch(() => { });
+};
 
 // --- Helper Functions ---
 const calculatePersona = (constraints) => {
@@ -163,7 +167,7 @@ const MetricModal = ({ metric, onClose, isDarkMode }) => {
     );
 };
 
-const MetricCard = ({ icon: Icon, label, value, unit, colorClass, isDarkMode, insight }) => {
+const MetricCard = ({ icon: Icon, label, value, unit, colorClass, isDarkMode, insight, actionKey }) => {
     const [open, setOpen] = useState(false);
     const metric = { icon: Icon, label, value, unit, colorClass, insight };
 
@@ -179,6 +183,11 @@ const MetricCard = ({ icon: Icon, label, value, unit, colorClass, isDarkMode, in
                                     : colorClass.includes('pink') ? 'rgba(236,72,153,0.35)'
                                         : 'rgba(16,185,129,0.35)';
 
+    const handleOpen = () => {
+        setOpen(true);
+        if (actionKey) rewardAction('card_open', actionKey);
+    };
+
     return (
         <>
             <motion.div
@@ -186,7 +195,7 @@ const MetricCard = ({ icon: Icon, label, value, unit, colorClass, isDarkMode, in
                 whileHover={{ y: -3, boxShadow: `0 8px 24px ${glowColor}` }}
                 whileTap={{ scale: 0.97 }}
                 transition={{ duration: 0.2, ease: 'easeOut' }}
-                onClick={() => setOpen(true)}
+                onClick={handleOpen}
             >
                 <GlassCard className="p-3 flex items-center gap-3 min-w-0" hoverEffect={false}>
                     <div className={`p-2 rounded-xl flex-shrink-0 ${isDarkMode ? `${colorClass}/20` : `${colorClass}/10`}`}>
@@ -230,6 +239,11 @@ const TAB_DEFS = [
 const TabSection = ({ isDarkMode, userData }) => {
     const [activeTab, setActiveTab] = useState('env');
 
+    const handleTabChange = (id) => {
+        setActiveTab(id);
+        rewardAction('tab_switch', id);
+    };
+
     /* colours for the active indicator */
     const accentGrad = 'from-emerald-500 to-teal-400';
     const accentText = isDarkMode ? 'text-emerald-400' : 'text-emerald-600';
@@ -248,7 +262,7 @@ const TabSection = ({ isDarkMode, userData }) => {
                     return (
                         <button
                             key={id}
-                            onClick={() => setActiveTab(id)}
+                            onClick={() => handleTabChange(id)}
                             className={`relative flex-1 flex items-center justify-center gap-2 px-4 py-3.5
                                 text-sm font-semibold tracking-wide transition-all duration-200 focus:outline-none
                                 ${isActive
@@ -428,15 +442,15 @@ const Dashboard = () => {
     const aqiStatus = getAQIStatus(envData?.aqi);
 
     const metrics = [
-        { icon: Gauge, label: 'AQI', value: envData?.aqi, unit: '', colorClass: 'text-blue-400', insight: envInsights['aqi'] },
-        { icon: Thermometer, label: 'Temp', value: envData?.temperature, unit: '°C', colorClass: 'text-amber-400', insight: envInsights['temperature'] },
-        { icon: Droplets, label: 'Humidity', value: envData?.humidity, unit: '%', colorClass: 'text-cyan-400', insight: envInsights['humidity'] },
-        { icon: Wind, label: 'Wind', value: envData?.wind_speed, unit: ' km/h', colorClass: 'text-teal-400', insight: envInsights['wind_speed'] },
-        { icon: Zap, label: 'UV Index', value: envData?.uv_index, unit: '', colorClass: 'text-yellow-400', insight: envInsights['uv_index'] },
-        { icon: CloudRain, label: 'PM2.5', value: envData?.pm2_5, unit: ' μg/m³', colorClass: 'text-rose-400', insight: envInsights['pm2_5'] },
-        { icon: Flame, label: 'PM10', value: envData?.pm10, unit: ' μg/m³', colorClass: 'text-orange-400', insight: envInsights['pm10'] },
-        { icon: Eye, label: 'Ozone', value: envData?.ozone, unit: ' μg/m³', colorClass: 'text-purple-400', insight: envInsights['ozone'] },
-        { icon: FlaskConical, label: 'NO₂', value: envData?.nitrogen_dioxide, unit: ' μg/m³', colorClass: 'text-pink-400', insight: envInsights['nitrogen_dioxide'] },
+        { icon: Gauge, label: 'AQI', value: envData?.aqi, unit: '', colorClass: 'text-blue-400', insight: envInsights['aqi'], actionKey: 'aqi' },
+        { icon: Thermometer, label: 'Temp', value: envData?.temperature, unit: '°C', colorClass: 'text-amber-400', insight: envInsights['temperature'], actionKey: 'temperature' },
+        { icon: Droplets, label: 'Humidity', value: envData?.humidity, unit: '%', colorClass: 'text-cyan-400', insight: envInsights['humidity'], actionKey: 'humidity' },
+        { icon: Wind, label: 'Wind', value: envData?.wind_speed, unit: ' km/h', colorClass: 'text-teal-400', insight: envInsights['wind_speed'], actionKey: 'wind_speed' },
+        { icon: Zap, label: 'UV Index', value: envData?.uv_index, unit: '', colorClass: 'text-yellow-400', insight: envInsights['uv_index'], actionKey: 'uv_index' },
+        { icon: CloudRain, label: 'PM2.5', value: envData?.pm2_5, unit: ' μg/m³', colorClass: 'text-rose-400', insight: envInsights['pm2_5'], actionKey: 'pm2_5' },
+        { icon: Flame, label: 'PM10', value: envData?.pm10, unit: ' μg/m³', colorClass: 'text-orange-400', insight: envInsights['pm10'], actionKey: 'pm10' },
+        { icon: Eye, label: 'Ozone', value: envData?.ozone, unit: ' μg/m³', colorClass: 'text-purple-400', insight: envInsights['ozone'], actionKey: 'ozone' },
+        { icon: FlaskConical, label: 'NO₂', value: envData?.nitrogen_dioxide, unit: ' μg/m³', colorClass: 'text-pink-400', insight: envInsights['nitrogen_dioxide'], actionKey: 'nitrogen_dioxide' },
     ];
 
     return (
@@ -513,7 +527,7 @@ const Dashboard = () => {
                 {/* Environmental Metrics Grid — always visible */}
                 <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-3 mb-6">
                     {metrics.map((m) => (
-                        <MetricCard key={m.label} {...m} isDarkMode={isDarkMode} insight={m.insight} />
+                        <MetricCard key={m.label} {...m} isDarkMode={isDarkMode} insight={m.insight} actionKey={m.actionKey} />
                     ))}
                 </div>
 
