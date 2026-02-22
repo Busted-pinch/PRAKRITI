@@ -2,7 +2,7 @@ from typing import Dict, Any
 from langchain_core.messages import AIMessage, SystemMessage, HumanMessage
 from src.langgraph.state import UnifiedState
 from src.core.aggregate_data import AggregateData
-from src.llm.gemini import get_gemini_llm
+from src.llm.factory import get_llm
 from loguru import logger
 from datetime import datetime, timedelta
 
@@ -26,11 +26,9 @@ async def environment_agent(state: UnifiedState, datastore: AggregateData) -> Di
         }
 
     # 1️⃣ Fetch environment snapshot
-    env_data = await datastore.get_or_fetch_environment(
-        session_id=user_id or "anonymous",
+    env_data = await datastore.get_environment_snapshot(
         lat=lat,
-        lon=lon,
-        forecast=False
+        lon=lon
     )
 
     if not env_data:
@@ -39,7 +37,7 @@ async def environment_agent(state: UnifiedState, datastore: AggregateData) -> Di
             "messages": [AIMessage(content="Unable to retrieve environment data.")]
         }
 
-    structured = env_data.model_dump()
+    structured = env_data
 
     # 2️⃣ Persist exposure snapshot (throttled 10 minutes)
     try:
@@ -58,8 +56,8 @@ async def environment_agent(state: UnifiedState, datastore: AggregateData) -> Di
             if recent.data:
                 last_time = datetime.fromisoformat(
                     recent.data[0]["recorded_at"].replace("Z", "")
-                )
-                if (datetime.utcnow() - last_time) < timedelta(minutes=10):
+                ).replace(tzinfo=None)
+                if (datetime.utcnow().replace(tzinfo=None) - last_time) < timedelta(minutes=10):
                     should_insert = False
 
             if should_insert:
@@ -82,7 +80,7 @@ async def environment_agent(state: UnifiedState, datastore: AggregateData) -> Di
         logger.warning(f"Exposure logging failed: {e}")
 
     # 3️⃣ Risk-aware LLM summary
-    llm = get_gemini_llm()
+    llm = get_llm(provider="groq")
     twin_context = state.get("structured_data", {}).get("llm_context", {})
 
     if not llm:

@@ -18,6 +18,7 @@ from src.api.news.views import router as news_router
 from src.api.law.views import router as law_router
 from src.api.ngo.views import router as ngo_router
 from src.api.map_routes import router as map_router
+from src.api.dashboard.views import router as dashboard_router
 
 
 
@@ -31,6 +32,8 @@ app = FastAPI(title="Techathon 3.0 PRAKRITI Backend",
 
 # CORS Configuration
 origins = [
+    "*", 
+    "https://prakriti-teal.vercel.app/",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
@@ -58,6 +61,7 @@ app.include_router(news_router, prefix="/news", tags=["News Intelligence"])
 app.include_router(law_router, prefix="/law", tags=["Law & Policy"])
 app.include_router(ngo_router, prefix="/ngo", tags=["NGO Events"])
 app.include_router(map_router, prefix="", tags=["Map"])
+app.include_router(dashboard_router, prefix="/dashboard", tags=["Dashboard"])
 
 
 @app.on_event("startup")

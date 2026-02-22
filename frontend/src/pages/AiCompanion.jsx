@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Mic, Sparkles } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import Layout from '../components/Layout';
 import api from '../services/api';
 
@@ -23,11 +24,18 @@ const formatMessage = (text) => {
 
 const AiCompanion = () => {
     const { isDarkMode } = useTheme();
+    const { user } = useAuth();
     const [messages, setMessages] = useState([
-        { id: 1, text: "Greetings, Traveler. I am Prakriti's Digital Twin. I can help you understand your environment and habits.", sender: 'bot' }
+        { id: 'welcome', text: "Greetings, Traveler. I am Prakriti's Digital Twin. I can help you understand your environment and habits.", sender: 'bot' }
     ]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+    const [locationData, setLocationData] = useState({ lat: 28.6139, lon: 77.2090 });
+
+    // WebSocket Refs
+    const wsRef = useRef(null);
+    const connectionAttemptRef = useRef(0);
+    const MAX_RETRIES = 3;
 
     // rotating placeholder state
     const [placeholderIndex, setPlaceholderIndex] = useState(0);
@@ -55,8 +63,104 @@ const AiCompanion = () => {
         const interval = setInterval(() => {
             setPlaceholderIndex((prev) => (prev + 1) % PLACEHOLDERS.length);
         }, 4000);
+
+        // Request precise location from user's browser
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setLocationData({
+                        lat: position.coords.latitude,
+                        lon: position.coords.longitude
+                    });
+                },
+                (error) => {
+                    console.warn("Geolocation denied/failed. Using default location (New Delhi):", error);
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        } else {
+            console.warn("Geolocation not supported by this browser.");
+        }
+
         return () => clearInterval(interval);
     }, []);
+
+    // --- WebSocket Management ---
+    const connectWebSocket = () => {
+        const currentToken = localStorage.getItem('token');
+        if (!currentToken || connectionAttemptRef.current >= MAX_RETRIES) return;
+
+        try {
+            const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
+            const ws = new WebSocket(`${wsUrl}/chat/stream?token=${currentToken}`);
+
+            ws.onopen = () => {
+                console.log('Chat WebSocket Connected');
+                connectionAttemptRef.current = 0; // reset on success
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'update') {
+                    // We are streaming tokens!
+                    setMessages(prev => {
+                        // Find the current streaming bot message, or create one
+                        const lastMsgPos = prev.length - 1;
+                        if (lastMsgPos >= 0 && prev[lastMsgPos].sender === 'bot' && prev[lastMsgPos].isStreaming) {
+                            // Update existing streaming message
+                            const newMessages = [...prev];
+                            newMessages[lastMsgPos] = { ...newMessages[lastMsgPos], text: data.content, agent: data.node || newMessages[lastMsgPos].agent };
+                            return newMessages;
+                        } else {
+                            // Add new streaming message
+                            return [...prev, { id: Date.now(), text: data.content, sender: 'bot', isStreaming: true, agent: data.node }];
+                        }
+                    });
+                } else if (data.type === 'complete') {
+                    // Stream is done, remove typing indicator and finalize message
+                    setIsTyping(false);
+                    setMessages(prev => {
+                        const newMessages = [...prev];
+                        const lastMsgPos = newMessages.length - 1;
+                        if (lastMsgPos >= 0 && newMessages[lastMsgPos].isStreaming) {
+                            newMessages[lastMsgPos] = { ...newMessages[lastMsgPos], isStreaming: false };
+                        }
+                        return newMessages;
+                    });
+                } else if (data.type === 'error') {
+                    console.error("WS Error from server:", data.content);
+                    setIsTyping(false);
+                    setMessages(prev => [...prev, { id: Date.now(), text: "I encountered an error processing that request.", sender: 'bot' }]);
+                }
+            };
+
+            ws.onclose = () => {
+                console.log('Chat WebSocket Disconnected');
+                // Exponential backoff reconnect
+                connectionAttemptRef.current += 1;
+                if (connectionAttemptRef.current < MAX_RETRIES) {
+                    setTimeout(connectWebSocket, Math.min(1000 * Math.pow(2, connectionAttemptRef.current), 10000));
+                }
+            };
+
+            wsRef.current = ws;
+        } catch (err) {
+            console.error("Failed to setup WebSocket:", err);
+        }
+    };
+
+    useEffect(() => {
+        if (user) {
+            connectWebSocket();
+        }
+        return () => {
+            if (wsRef.current) {
+                wsRef.current.close();
+            }
+        };
+    }, [user]);
+    // ----------------------------
 
     const messagesContainerRef = useRef(null);
 
@@ -83,8 +187,9 @@ const AiCompanion = () => {
 
         const currentInput = textToSend;
 
-        try {
-            if (currentInput.toLowerCase().includes('what if') || currentInput.toLowerCase().includes('simulate')) {
+        if (currentInput.toLowerCase().includes('what if') || currentInput.toLowerCase().includes('simulate')) {
+            // Simulations are still best via heavy REST endpoint currently
+            try {
                 const response = await api.post('/simulation/run', {
                     scenario: currentInput,
                     parameters: { aqi: 200, temp: 30 }
@@ -97,20 +202,37 @@ const AiCompanion = () => {
                     isSimulation: true,
                     data: response.data
                 };
+                setIsTyping(false);
                 setMessages(prev => [...prev, botMsg]);
-            } else {
-                const response = await api.post('/chat/message', { message: currentInput });
-                setMessages(prev => [...prev, { id: Date.now() + 1, text: response.data.reply, sender: 'bot' }]);
+            } catch (err) {
+                setIsTyping(false);
+                setMessages(prev => [...prev, { id: Date.now() + 1, text: "Simulation processing failed.", sender: 'bot' }]);
             }
+            return;
+        }
+
+        // --- Use WebSocket if available ---
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({
+                content: currentInput,
+                lat: locationData.lat,
+                lon: locationData.lon
+            }));
+            return;
+        }
+
+        // --- Fallback to REST HTTP ---
+        console.warn("WebSocket not connected. Falling back to HTTP.");
+        try {
+            const response = await api.post('/chat/message', { message: currentInput });
+            setMessages(prev => [...prev, { id: Date.now() + 1, text: response.data.reply, sender: 'bot' }]);
         } catch (err) {
             console.warn("Backend error, using fallback.", err);
-            const mockReply = currentInput.toLowerCase().includes('what if')
-                ? "Simulation projected: If AQI reaches 200, outdoor physical activity risk increases by 45%. Recommended action: Switch to indoor yoga."
-                : "I am currently capable of simulating environmental scenarios. Try asking 'What if AQI rises to 300?'";
+            const mockReply = "I am currently offline. Please try again later.";
 
             setMessages(prev => [...prev, {
                 id: Date.now() + 1,
-                text: `[OFFLINE MODE] ${mockReply}`,
+                text: `[OFFLINE] ${mockReply}`,
                 sender: 'bot'
             }]);
         } finally {
@@ -154,6 +276,11 @@ const AiCompanion = () => {
                                     ? 'bg-white/5 text-gray-200 rounded-tl-sm border border-white/10'
                                     : 'bg-white text-gray-700 rounded-tl-sm border border-gray-100 shadow-sm')
                                 }`}>
+                                {msg.sender === 'bot' && msg.agent && (
+                                    <div className={`text-[10px] mb-1.5 font-bold tracking-wider uppercase ${isDarkMode ? 'text-emerald-400/80' : 'text-emerald-600/80'}`}>
+                                        Agent: {msg.agent}
+                                    </div>
+                                )}
                                 {formatMessage(msg.text)}
                             </div>
                         </div>

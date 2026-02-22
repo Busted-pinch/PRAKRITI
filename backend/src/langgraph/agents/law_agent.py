@@ -1,5 +1,5 @@
 import json
-from src.llm.gemini import get_gemini_llm
+from src.llm.factory import get_llm
 
 _USER_LAW_CACHE = {}
 USER_CACHE_TTL = 60 * 60  # 1 hour to reduce LLM load on laws since they don't change fast
@@ -36,9 +36,7 @@ def process_laws_for_user(user_profile: dict, raw_laws: list) -> list:
     }
 
     try:
-        model = get_gemini_llm()
-        import google.generativeai as genai
-        
+        model = get_llm(provider="groq")
         for law in raw_laws:
             prompt_context = {
                 "user_profile": clean_profile,
@@ -58,16 +56,16 @@ def process_laws_for_user(user_profile: dict, raw_laws: list) -> list:
             }}
             """
             
-            gemini_model = genai.GenerativeModel("gemini-2.5-flash-lite")
-            response = gemini_model.generate_content(
-                prompt,
-                generation_config=genai.GenerationConfig(
-                    response_mime_type="application/json",
-                )
-            )
-            
             try:
-                result = json.loads(response.text)
+                from langchain_core.messages import HumanMessage
+                response = model.invoke([HumanMessage(content=prompt)])
+                response_text = response.content.strip()
+                if response_text.startswith("```json"):
+                    response_text = response_text[7:-3].strip()
+                elif response_text.startswith("```"):
+                    response_text = response_text[3:-3].strip()
+                    
+                result = json.loads(response_text)
                 # carry over frontend routing fields
                 result["category"] = law.get("category", "regulation")
                 processed_laws.append(result)

@@ -2,7 +2,7 @@ from typing import Dict, Any
 from langchain_core.messages import AIMessage, SystemMessage
 from src.langgraph.state import UnifiedState
 from src.core.aggregate_data import AggregateData
-from src.llm.gemini import get_gemini_llm
+from src.llm.factory import get_llm
 from loguru import logger
 
 
@@ -15,7 +15,7 @@ async def chatbot_agent(state: UnifiedState, datastore: AggregateData) -> Dict[s
     logger.info("Chatbot Agent: Started processing")
 
     messages = state["messages"]
-    llm = get_gemini_llm()
+    llm = get_llm(provider="groq")
     twin_context = state.get("structured_data", {}).get("llm_context", {})
 
     if not llm:

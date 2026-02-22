@@ -3,7 +3,7 @@ import requests
 import json
 from typing import List, Dict
 from src.core.cache import get_cache, set_cache
-from src.llm.gemini import get_gemini_llm
+from src.llm.factory import get_llm
 from langchain_core.messages import HumanMessage
 from src.services.tavily_service import tavily_service
 from src.core.supabase_client import supabase
@@ -56,7 +56,7 @@ class NewsService:
         # 3. Enrich with LLM
         enriched_news = []
         try:
-            llm = get_gemini_llm()
+            llm = get_llm(provider="groq", temperature=0.2)
             if not llm:
                 print("Gemini LLM returned None. Need GOOGLE_API_KEY.")
                 return extracted_news

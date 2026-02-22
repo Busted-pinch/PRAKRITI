@@ -237,8 +237,10 @@ class TwinEngine:
         twin_state = {
             "current_risk": risk,
             "risk_category": "low" if risk < 33 else "moderate" if risk < 66 else "high",
-            "primary_risk_driver": primary_driver,
-            "behavior_environment_conflict": conflict,
+            "risk_components": {
+                "primary_risk_driver": primary_driver,
+                "behavior_environment_conflict": conflict
+            },
             "trend_slope": trend_slope,
             "projection_7d": projection,
             "mitigation_plan": mitigation,

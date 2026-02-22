@@ -1,6 +1,6 @@
 import os
 import json
-from src.llm.gemini import get_gemini_llm
+from src.llm.factory import get_llm
 
 # Local dictionary cache for user-processed news
 # Keys are user_id, values are {"data": [...], "timestamp": ...}
@@ -54,13 +54,8 @@ def process_news_for_user(user_profile: dict, environment_context: dict, raw_new
     }
 
     try:
-        model = get_gemini_llm()
-        # Initialize the model directly as it might not be bound to tools here
-        import google.generativeai as genai
-        # We need a model instance that can enforce JSON output if supported, 
-        # or we just prompt it heavily. V15 Pro usually follows structural prompts well.
-        generation_config = {"response_mime_type": "application/json"}
-        # Fallback to standard chat format for gemini client
+        model = get_llm(provider="groq")
+        # We request structured output via prompt instructions.
         
         for article in selected_news:
             prompt_context = {
@@ -90,23 +85,19 @@ def process_news_for_user(user_profile: dict, environment_context: dict, raw_new
             }}
             """
             
-            # Use raw gemini API to force JSON and ensure clean output
-            import google.generativeai as genai
-            gemini_model = genai.GenerativeModel("gemini-1.5-pro-latest")
-            response = gemini_model.generate_content(
-                prompt,
-                generation_config=genai.GenerationConfig(
-                    response_mime_type="application/json",
-                )
-            )
-            
             try:
-                # Parse JSON
-                result = json.loads(response.text)
+                from langchain_core.messages import HumanMessage
+                response = model.invoke([HumanMessage(content=prompt)])
+                response_text = response.content.strip()
+                if response_text.startswith("```json"):
+                    response_text = response_text[7:-3].strip()
+                elif response_text.startswith("```"):
+                    response_text = response_text[3:-3].strip()
+                    
+                result = json.loads(response_text)
                 processed_news.append(result)
             except Exception as parse_e:
                 print(f"Error parsing JSON from LLM: {parse_e}")
-                print(f"Raw Output: {response.text}")
 
     except Exception as e:
         print(f"News Processing Error: {e}")

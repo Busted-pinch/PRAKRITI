@@ -1,5 +1,6 @@
 import os
 import json
+import math
 import httpx
 from datetime import datetime
 from uuid import uuid4
@@ -10,21 +11,36 @@ from src.schemas.ngo import NGOEventResponse
 try:
     from sentence_transformers import SentenceTransformer
     has_st = True
-    # Initialize the model at the module level so it's loaded only once
-    embedder = SentenceTransformer('all-MiniLM-L6-v2')
 except ImportError:
     has_st = False
-    embedder = None
+
+# Lazily initialized — loaded on first use to avoid crashing at startup
+# if HuggingFace is unreachable or the model isn't cached locally.
+embedder = None
+
+def _get_embedder():
+    """Return the SentenceTransformer model, initializing it on first call."""
+    global embedder
+    if not has_st:
+        return None
+    if embedder is None:
+        try:
+            embedder = SentenceTransformer('all-MiniLM-L6-v2')
+        except Exception as e:
+            print(f"WARNING: Could not load SentenceTransformer model: {e}")
+            return None
+    return embedder
 
 async def get_embedding(text: str) -> list[float]:
     """Generates embedding using sentence-transformers (all-MiniLM-L6-v2)."""
-    if not has_st or embedder is None:
-        print("WARNING: sentence-transformers not found. Returning fake embedding.")
+    model = _get_embedder()
+    if model is None:
+        print("WARNING: SentenceTransformer unavailable. Returning zero embedding.")
         return [0.0] * 384
     
     try:
         # Convert numpy array to list of floats
-        embedding = embedder.encode(text).tolist()
+        embedding = model.encode(text).tolist()
         return embedding
     except Exception as e:
         print(f"Error generating embedding: {e}")
@@ -105,14 +121,27 @@ async def ingest_events_to_db(events: list[dict]):
             print(f"Failed to insert event to Supabase: {e}")
 
 async def get_user_profile_text(user_id: str) -> str:
-    """Fetch user behavior profile to build embedding context."""
+    """Fetch user behavior profile to build embedding context (5s timeout)."""
+    import asyncio
     try:
-        res = supabase.table("behavior_profiles").select("behavior_model, selected_interests").eq("user_id", user_id).execute()
+        loop = asyncio.get_running_loop()
+        res = await asyncio.wait_for(
+            loop.run_in_executor(
+                None,
+                lambda: supabase.table("behavior_profiles")
+                    .select("behavior_model, selected_interests")
+                    .eq("user_id", user_id)
+                    .execute()
+            ),
+            timeout=5.0
+        )
         if res.data and len(res.data) > 0:
             profile = res.data[0]
             interests = profile.get("selected_interests", [])
             behavior = profile.get("behavior_model", {})
             return f"interests: {', '.join(interests)}. behaviors: {json.dumps(behavior)}"
+    except asyncio.TimeoutError:
+        print(f"Timeout fetching user profile context for user_id={user_id}. Using fallback.")
     except Exception as e:
         print(f"Error fetching user profile context: {e}")
     return "general volunteering community service"
@@ -149,6 +178,15 @@ async def get_recommended_ngo_events(user_id: str, locality: str) -> dict:
 
         if events:
             # Map back to schemas
+            def safe_float(val):
+                """Return None if val is NaN/Inf, else return val."""
+                if val is None:
+                    return None
+                try:
+                    return val if math.isfinite(val) else None
+                except (TypeError, ValueError):
+                    return None
+
             mapped_events = []
             for e in events:
                 mapped_events.append(NGOEventResponse(
@@ -156,8 +194,8 @@ async def get_recommended_ngo_events(user_id: str, locality: str) -> dict:
                     ngo_name=e.get("ngo_name", ""),
                     event_title=e.get("event_title", ""),
                     description=e.get("description"),
-                    location=e.get("location"), # Not returned by RPC unless updated, but works
-                    similarity=e.get("similarity")
+                    location=e.get("location"),
+                    similarity=safe_float(e.get("similarity"))
                 ))
             return {"events": mapped_events, "source": "database"}
         
