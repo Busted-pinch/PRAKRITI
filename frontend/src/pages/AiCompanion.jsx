@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Mic, Sparkles } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 import Layout from '../components/Layout';
 import api from '../services/api';
+import { useSpeechToText } from '../hooks/useSpeechToText';
+import { speakText, stopSpeech } from '../utils/speech';
 
 // Helper to render **bold** markdown and newlines in chat messages
 const formatMessage = (text) => {
@@ -23,6 +23,55 @@ const formatMessage = (text) => {
     ));
 };
 
+// Speaker button for each bot message
+const BotMessageBubble = ({ msg, isDarkMode }) => {
+    const [speaking, setSpeaking] = useState(false);
+
+    const handleSpeak = () => {
+        if (speaking) {
+            stopSpeech();
+            setSpeaking(false);
+        } else {
+            // Strip markdown bold markers for cleaner speech
+            const plain = msg.text.replace(/\*\*(.*?)\*\*/g, '$1');
+            speakText(plain, () => setSpeaking(true), () => setSpeaking(false));
+        }
+    };
+
+    return (
+        <div className="flex justify-start">
+            <div className={`relative group max-w-[75%] p-4 rounded-3xl rounded-tl-sm text-sm leading-relaxed
+                ${isDarkMode
+                    ? 'bg-white/5 text-gray-200 border border-white/10'
+                    : 'bg-white text-gray-700 border border-gray-100 shadow-sm'
+                }`}>
+                {msg.agent && (
+                    <div className={`text-[10px] mb-1.5 font-bold tracking-wider uppercase ${isDarkMode ? 'text-emerald-400/80' : 'text-emerald-600/80'}`}>
+                        Agent: {msg.agent}
+                    </div>
+                )}
+                {formatMessage(msg.text)}
+
+                {/* Speaker button — bottom-right, visible on hover or while speaking */}
+                <button
+                    onClick={handleSpeak}
+                    title={speaking ? 'Stop' : 'Read aloud'}
+                    className={`absolute -bottom-2.5 right-3 p-1.5 rounded-full border transition-all duration-200
+                        opacity-0 group-hover:opacity-100 focus:opacity-100
+                        ${speaking
+                            ? '!opacity-100 bg-emerald-500/20 border-emerald-500/40 text-emerald-400 animate-pulse'
+                            : isDarkMode
+                                ? 'bg-gray-900 border-white/10 text-gray-500 hover:text-emerald-400 hover:border-emerald-500/40'
+                                : 'bg-white border-gray-200 text-gray-400 hover:text-emerald-500 hover:border-emerald-200'
+                        }`}
+                >
+                    {speaking ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
+                </button>
+            </div>
+        </div>
+    );
+};
+
 const AiCompanion = () => {
     const { isDarkMode } = useTheme();
     const { user } = useAuth();
@@ -32,6 +81,11 @@ const AiCompanion = () => {
     ]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+
+    // Speech-to-text: toggle mic on/off; transcript live-previews in the input bar
+    const { toggleListening, isListening } = useSpeechToText((transcript) => {
+        setInput(transcript);
+    });
     const [locationData, setLocationData] = useState({ lat: 28.6139, lon: 77.2090 });
 
     // WebSocket Refs
@@ -267,30 +321,20 @@ const AiCompanion = () => {
 
                 {/* Messages */}
                 <div ref={messagesContainerRef} className={`flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar ${isDarkMode ? 'bg-gray-900/40 backdrop-blur-sm' : 'bg-white/50 backdrop-blur-sm'}`}>
-                    {messages.map((msg) => (
-                        <div
-                            key={msg.id}
-                            className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                        >
-                            <div className={`max-w-[75%] p-4 rounded-3xl text-sm leading-relaxed ${msg.sender === 'user'
-                                ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-tr-sm shadow-emerald-500/20 shadow-lg'
-                                : (isDarkMode
-                                    ? 'bg-white/5 text-gray-200 rounded-tl-sm border border-white/10'
-                                    : 'bg-white text-gray-700 rounded-tl-sm border border-gray-100 shadow-sm')
-                                }`}>
-                                {msg.sender === 'bot' && msg.agent && (
-                                    <div className={`text-[10px] mb-1.5 font-bold tracking-wider uppercase ${isDarkMode ? 'text-emerald-400/80' : 'text-emerald-600/80'}`}>
-                                        Agent: {msg.agent}
-                                    </div>
-                                )}
-                                {formatMessage(msg.text)}
+                    {messages.map((msg) =>
+                        msg.sender === 'user' ? (
+                            <div key={msg.id} className="flex justify-end">
+                                <div className="max-w-[75%] p-4 rounded-3xl text-sm leading-relaxed bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-tr-sm shadow-emerald-500/20 shadow-lg">
+                                    {formatMessage(msg.text)}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        ) : (
+                            <BotMessageBubble key={msg.id} msg={msg} isDarkMode={isDarkMode} />
+                        )
+                    )}
                     {isTyping && (
                         <div className="flex justify-start">
-                            <div className={`p-4 rounded-3xl rounded-tl-sm flex items-center gap-1.5 ${isDarkMode ? 'bg-white/5' : 'bg-white border border-gray-100'
-                                }`}>
+                            <div className={`p-4 rounded-3xl rounded-tl-sm flex items-center gap-1.5 ${isDarkMode ? 'bg-white/5' : 'bg-white border border-gray-100'}`}>
                                 <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                                 <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                                 <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
@@ -328,14 +372,44 @@ const AiCompanion = () => {
                         )}
                     </AnimatePresence>
 
+                    {/* Listening indicator above the form */}
+                    <AnimatePresence>
+                        {isListening && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 4 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 4 }}
+                                className="flex items-center gap-2 mb-2 px-1"
+                            >
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                                </span>
+                                <span className={`text-xs font-medium ${isDarkMode ? 'text-red-400' : 'text-red-500'}`}>
+                                    Listening… click 🎤 again to stop
+                                </span>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
                     <form onSubmit={handleSendMessage} className={`flex items-center gap-2 p-1.5 rounded-2xl border transition-all ${isDarkMode
                         ? 'bg-black/20 border-white/10 focus-within:border-emerald-500/50'
                         : 'bg-white border-gray-200 focus-within:border-emerald-200 shadow-sm'
                         }`}>
-                        <button type="button" className={`p-3 rounded-xl transition-colors ${isDarkMode ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                            }`}>
+                        <motion.button
+                            type="button"
+                            onClick={toggleListening}
+                            whileTap={{ scale: 0.9 }}
+                            title={isListening ? 'Click to stop' : 'Click to speak'}
+                            className={`p-3 rounded-xl transition-all duration-300 ${isListening
+                                ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/40'
+                                : isDarkMode
+                                    ? 'text-gray-400 hover:text-white hover:bg-white/5'
+                                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                                }`}
+                        >
                             <Mic className="w-5 h-5" />
-                        </button>
+                        </motion.button>
                         <input
                             type="text"
                             value={input}
@@ -357,7 +431,7 @@ const AiCompanion = () => {
                     </p>
                 </div>
             </div>
-        </Layout>
+        </Layout >
     );
 };
 

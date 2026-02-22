@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useAnimation, motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, CheckCircle2, Info, Globe, Sparkles } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Info, Globe, Sparkles, Volume2, VolumeX } from 'lucide-react';
+import { speakText, stopSpeech } from '../utils/speech';
 
 /* ─── Impact config ─────────────────────────────────────────── */
 const IMPACT = {
@@ -66,6 +67,19 @@ const NewsCard = ({ article, isDarkMode }) => {
     const { headline, summary_simple, why_it_matters, actionable_steps, impact_level } = article;
     const impact = IMPACT[impact_level?.toLowerCase()] || IMPACT.medium;
 
+    // TTS: reads the currently-visible face
+    const [speaking, setSpeaking] = useState(false);
+    const getCurrentFaceText = () => {
+        if (face === 0) return `${headline}. ${summary_simple}`;
+        if (face === 1) return why_it_matters || 'No personalised relevance available.';
+        return actionable_steps?.join('. ') || 'No action steps available.';
+    };
+    const handleSpeak = (e) => {
+        e.stopPropagation();
+        if (speaking) { stopSpeech(); setSpeaking(false); }
+        else speakText(getCurrentFaceText(), () => setSpeaking(true), () => setSpeaking(false));
+    };
+
     /* Two-phase flip — no mirroring */
     const flip = async () => {
         if (flipping.current) return;
@@ -119,6 +133,21 @@ const NewsCard = ({ article, isDarkMode }) => {
             >
                 {/* ── Top gradient bar ── */}
                 <div className={`h-[3px] w-full bg-gradient-to-r ${impact.bar}`} />
+
+                {/* ── Speaker button — bottom-right, stops card flip ── */}
+                <button
+                    onClick={handleSpeak}
+                    title={speaking ? 'Stop' : 'Listen'}
+                    className={`absolute bottom-3 right-3 z-20 p-1.5 rounded-lg transition-all duration-200
+                        ${speaking
+                            ? 'bg-emerald-500/25 text-emerald-400 animate-pulse'
+                            : isDarkMode
+                                ? 'text-gray-500 hover:text-emerald-400 hover:bg-white/10'
+                                : 'text-gray-400 hover:text-emerald-600 hover:bg-gray-100'
+                        }`}
+                >
+                    {speaking ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                </button>
 
                 {/*
                     Shimmer layer: visible only on hover in dark mode.
