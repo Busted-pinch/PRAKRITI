@@ -175,21 +175,6 @@ async def get_recommended_ngo_events(user_id: str, locality: str) -> dict:
                 # Re-run search
                 res = supabase.rpc("match_ngo_events", rpc_params).execute()
                 events = res.data
-                
-                # If STILL empty (DB indexing delay or RPC missing), map Tavily results directly
-                if not events or len(events) == 0:
-                    print("DB still empty after insert. Mapping Tavily results directly.")
-                    mapped_events = []
-                    for e in fetched:
-                        mapped_events.append(NGOEventResponse(
-                            id=str(uuid4()),
-                            ngo_name=e.get("ngo_name", "Unknown NGO"),
-                            event_title=e.get("event_title", "Community Event"),
-                            description=e.get("description", ""),
-                            location=e.get("location", locality),
-                            similarity=0.85 # Artificial relevance score
-                        ))
-                    return {"events": mapped_events, "source": "tavily"}
 
         if events:
             # Map back to schemas
@@ -214,7 +199,7 @@ async def get_recommended_ngo_events(user_id: str, locality: str) -> dict:
                 ))
             return {"events": mapped_events, "source": "database"}
         
-        return {"events": [], "source": "empty"}
+        return {"events": [], "source": "tavily"}
     except Exception as e:
         print(f"Error during recommendation: {e}")
         # Gracefully handle the case if user hasn't created the RPC or tables
