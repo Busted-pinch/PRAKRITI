@@ -394,9 +394,9 @@ const Profile = () => {
                 </div>
 
                 {/* ── Charts + Achievements ───────────────────────────────────── */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mb-8 items-start">
                     {/* Trait Resonance Radar Chart */}
-                    <GlassCard className="md:col-span-4 p-6 min-h-[400px] flex flex-col justify-between">
+                    <GlassCard className="md:col-span-4 p-6 flex flex-col">
                         <div>
                             <div className="flex justify-between items-start mb-4">
                                 <h3 className="font-semibold text-lg flex items-center gap-2">
@@ -422,7 +422,7 @@ const Profile = () => {
                     </GlassCard>
 
                     {/* Respiratory Resilience Pie Chart */}
-                    <GlassCard className={`md:col-span-4 p-6 min-h-[400px] transition-all duration-500 ${environmentalMode
+                    <GlassCard className={`md:col-span-4 p-6 transition-all duration-500 ${environmentalMode
                         ? (isDarkMode ? 'shadow-[0_0_30px_-5px_rgba(16,185,129,0.3)] border-emerald-500/30' : 'shadow-[0_0_30px_-5px_rgba(16,185,129,0.4)] border-emerald-500/50')
                         : ''}`}>
                         <h3 className="font-semibold text-lg flex items-center gap-2 mb-6">
@@ -456,7 +456,7 @@ const Profile = () => {
                     </GlassCard>
 
                     {/* Achievements — replaces Leaderboard */}
-                    <div className="md:col-span-4 min-h-[400px]">
+                    <div className="md:col-span-4">
                         <Achievements achievements={rewards.achievements} />
                     </div>
                 </div>
