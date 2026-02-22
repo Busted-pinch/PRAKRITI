@@ -4,12 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Wind, Map, Scale,
     Droplets, Thermometer,
-    Leaf, Zap, Eye, Gauge, CloudRain, FlaskConical, Flame
+    Leaf, Zap, Eye, Gauge, CloudRain, FlaskConical, Flame, Volume2, VolumeX
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useEnvironment } from '../context/EnvironmentContext';
 import GlassCard from '../components/GlassCard';
 import Layout from '../components/Layout';
+import { speakText, stopSpeech } from '../utils/speech';
 
 import NewsSection from '../components/NewsSection';
 import LawPolicySection from '../components/LawPolicySection';
@@ -58,6 +59,14 @@ const MetricModal = ({ metric, onClose, isDarkMode }) => {
         window.addEventListener('keydown', handleKey);
         return () => window.removeEventListener('keydown', handleKey);
     }, [handleKey]);
+
+    const [speaking, setSpeaking] = useState(false);
+    const handleSpeak = (e) => {
+        e.stopPropagation();
+        if (!metric.insight) return;
+        if (speaking) { stopSpeech(); setSpeaking(false); }
+        else speakText(`${metric.label}. ${metric.insight}`, () => setSpeaking(true), () => setSpeaking(false));
+    };
 
     const { icon: Icon, label, value, unit, colorClass, insight } = metric;
     const formattedValue = value != null
@@ -142,7 +151,24 @@ const MetricModal = ({ metric, onClose, isDarkMode }) => {
                         {/* ── AI Insight section ── */}
                         <div className="space-y-4">
                             <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-white/[0.04] border border-white/8' : 'bg-gray-50 border border-gray-100'}`}>
-                                <p className={`text-[11px] font-bold uppercase tracking-widest mb-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>What This Means for You</p>
+                                <div className="flex items-center justify-between mb-2">
+                                    <p className={`text-[11px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>What This Means for You</p>
+                                    {metric.insight && (
+                                        <button
+                                            onClick={handleSpeak}
+                                            title={speaking ? 'Stop' : 'Listen'}
+                                            className={`p-1.5 rounded-lg transition-all duration-200
+                                                ${speaking
+                                                    ? 'bg-emerald-500/20 text-emerald-400 animate-pulse'
+                                                    : isDarkMode
+                                                        ? 'text-gray-500 hover:text-emerald-400 hover:bg-emerald-500/10'
+                                                        : 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50'
+                                                }`}
+                                        >
+                                            {speaking ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                                        </button>
+                                    )}
+                                </div>
                                 {insight ? (
                                     <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>{insight}</p>
                                 ) : (

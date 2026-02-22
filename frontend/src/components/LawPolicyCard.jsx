@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useAnimation, motion, AnimatePresence } from 'framer-motion';
-import { Scale, Droplets, Wind, Leaf, Globe, ExternalLink } from 'lucide-react';
+import { Scale, Droplets, Wind, Leaf, Globe, ExternalLink, Volume2, VolumeX } from 'lucide-react';
+import { speakText, stopSpeech } from '../utils/speech';
 
 /* ─── Category icon ──────────────────────────────────────────── */
 const getCategoryIcon = (category) => {
@@ -48,6 +49,18 @@ const LawPolicyCard = ({ law, isDarkMode }) => {
     const controls = useAnimation();
 
     const t = TYPE[law.type] || defaultType;
+
+    // TTS: reads the currently-visible face
+    const [speaking, setSpeaking] = useState(false);
+    const getCurrentFaceText = () => {
+        if (face === 0) return `${law.title}. ${law.summary_simple || ''}`;
+        return law.why_it_matters_to_user || law.summary_simple || 'No personalised relevance available.';
+    };
+    const handleSpeak = (e) => {
+        e.stopPropagation();
+        if (speaking) { stopSpeech(); setSpeaking(false); }
+        else speakText(getCurrentFaceText(), () => setSpeaking(true), () => setSpeaking(false));
+    };
 
     /* Two-phase flip — no mirror */
     const flip = async () => {
@@ -114,6 +127,21 @@ const LawPolicyCard = ({ law, isDarkMode }) => {
             >
                 {/* Gradient accent bar */}
                 <div className={`h-[3px] w-full bg-gradient-to-r ${t.bar}`} />
+
+                {/* ── Speaker button — bottom-right, stops card flip ── */}
+                <button
+                    onClick={handleSpeak}
+                    title={speaking ? 'Stop' : 'Listen'}
+                    className={`absolute bottom-3 right-3 z-20 p-1.5 rounded-lg transition-all duration-200
+                        ${speaking
+                            ? 'bg-emerald-500/25 text-emerald-400 animate-pulse'
+                            : isDarkMode
+                                ? 'text-gray-500 hover:text-emerald-400 hover:bg-white/10'
+                                : 'text-gray-400 hover:text-emerald-600 hover:bg-gray-100'
+                        }`}
+                >
+                    {speaking ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                </button>
 
                 {/* Dark-mode shimmer */}
                 <AnimatePresence>
