@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Mic, Sparkles } from 'lucide-react';
+import { Send, Mic, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import Layout from '../components/Layout';
 import api from '../services/api';
 import { useSpeechToText } from '../hooks/useSpeechToText';
